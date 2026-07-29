@@ -43,7 +43,7 @@ public class AccountService
         if(!customerExists)
         {
             return ServiceResult<CreateAccountResponse?>
-                .Failure(Errors.UserNotExistError);
+                .Failure(Errors.CustomerNotExistError);
         }
         else
         {
@@ -136,6 +136,7 @@ public class AccountService
             };
 
             var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
+            
             DepositResponse response = new DepositResponse
             {
                 TransactionAmount = authResponse.TransactionAmount,

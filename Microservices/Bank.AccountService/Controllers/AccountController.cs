@@ -98,7 +98,7 @@ public class AccountController: ControllerBase
     public async Task<IActionResult> AssignStatus(AssignStatusRequest request, string accountNo)
     {
         var result = await _accountService.AssignStatusAsync(request, accountNo);
-        if (result.Data == null)
+        if (!result.IsSuccess)
         {
             return StatusCode(403, new ErrorResponse(result.Error));
         }

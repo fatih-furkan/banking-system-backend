@@ -1,6 +1,5 @@
 ﻿using Bank.CardService.Clients;
 using Bank.CardService.Models.Dtos.ClientDtos.SagaDtos;
-using Bank.CardService.Services.Internal;
 using Bank.Shared;
 using Bank.Shared.Constants;
 

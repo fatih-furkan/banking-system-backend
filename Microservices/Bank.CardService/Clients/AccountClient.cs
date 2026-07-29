@@ -66,11 +66,11 @@ public class AccountClient
     {
         var body = new
         {
-            status = status
+            Status = status
         };
         
         using var response = await _httpClient
-            .PostAsJsonAsync($"/api/{accountNo}/assign-status", body);
+            .PostAsJsonAsync($"/api/account/{accountNo}/assign-status", body);
         response.EnsureSuccessStatusCode();
         return;
     }

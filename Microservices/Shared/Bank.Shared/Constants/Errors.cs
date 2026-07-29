@@ -19,11 +19,6 @@ public static class Errors
             ErrorCode.AuthorizationServiceResponseErr,
             Constants.ExceptionMessages.AuthorizationServiceResponseError);
 
-    public static readonly Error UserNotExistError =
-        new(
-            ErrorCode.UserNotExistErr,
-            Constants.ExceptionMessages.UserNotExistError);
-
     public static readonly Error UnauthorizedChannelError =
         new(
             ErrorCode.UnauthorizedChannelErr,
@@ -173,4 +168,14 @@ public static class Errors
         new(
             ErrorCode.CustomerNotExistErr,
             Constants.ExceptionMessages.CustomerNotExistError);
+    
+    public static readonly Error LimitNotFoundError =
+        new(
+            ErrorCode.LimitNotFoundErr,
+            Constants.ExceptionMessages.LimitNotFoundError);
+    
+    public static readonly Error InsufficientLimitError =
+        new(
+            ErrorCode.InsufficientLimitErr,
+            Constants.ExceptionMessages.InsufficientLimitError);
 }

@@ -31,8 +31,6 @@ public class Constants
         public const string AccountNotFoundError = "Account could not be found.";
         public const string AuthorizationServiceResponseError =
             "AuthorizationService response is invalid.";
-
-        public const string UserNotExistError = "The user does not exist.";
         public const string UnauthorizedChannel = "Unauthorized channel.";
         public const string PrecisionError = "The amount can have at most two decimal places.";
         public const string NegativeAmountError = "Amount cannot be negative.";
@@ -66,6 +64,8 @@ public class Constants
         public const string UnexpectedError = "Unexpected error.";
         public const string GetCardError = "Error while getting the cards";
         public const string CardNotExistError = "Card does not exist.";
-        public const string CustomerNotExistError = "Customer does not exist.";
+        public const string CustomerNotExistError = "The customer does not exist.";
+        public const string LimitNotFoundError = "Limit could not be found.";
+        public const string InsufficientLimitError = "Customer does not exist or has insufficient funds.";
     }
 }
