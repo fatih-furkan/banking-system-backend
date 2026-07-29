@@ -52,6 +52,8 @@ public class SpendingLimitService
         }
         else
         {
+            var time = DateTime.UtcNow;
+            
             var limit = new SpendingLimit
             {
                 CustomerId = createSpendingLimitRequest.CustomerId.Value,
@@ -65,7 +67,10 @@ public class SpendingLimitService
                 CustomerId = createSpendingLimitRequest.CustomerId.Value,
                 AnnualLimit = createSpendingLimitRequest.AnnualLimit.Value,
                 DailyLimit = createSpendingLimitRequest.DailyLimit.Value,
-                MonthlyLimit = createSpendingLimitRequest.MonthlyLimit.Value
+                MonthlyLimit = createSpendingLimitRequest.MonthlyLimit.Value,
+                LastDailyReset = time,
+                LastAnnualReset = time,
+                LastMonthlyReset = time
             };
             
             _context.SpendingLimits.Add(limit);

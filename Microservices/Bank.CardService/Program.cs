@@ -5,6 +5,7 @@ using Bank.CardService.Sagas;
 using Bank.CardService.Services;
 using Bank.CardService.Services.Internal;
 using Bank.Shared;
+using Bank.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,12 +41,24 @@ builder.Services.AddControllers()
 
 builder.Services.AddHttpClient<CustomerClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:7004");
+    string baseAddress =
+        builder.Configuration["Services:CustomerService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.CustomerServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
 });
 
 builder.Services.AddHttpClient<AccountClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:7000");
+    string baseAddress =
+        builder.Configuration["Services:AccountService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.AccountServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
 });
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();

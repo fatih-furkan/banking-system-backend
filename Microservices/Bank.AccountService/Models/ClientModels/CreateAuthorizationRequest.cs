@@ -78,4 +78,7 @@ public class CreateAuthorizationRequest
             "Transaction amount has an invalid value."
     )]
     public decimal? TransactionAmount { get; set; }
+    
+    [Required]
+    public long? TransactionId { get; set; }
 }

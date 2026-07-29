@@ -89,8 +89,8 @@ public class AccountService
 
         return false;
     }
-
-    public async Task<ServiceResult<DepositResponse>> DepositAsync(
+    
+        public async Task<ServiceResult<DepositResponse>> DepositAsync(
     DepositRequest request)
 {
     if (request.ChannelCode == ChannelCode.Pos)
@@ -194,7 +194,8 @@ public class AccountService
                 : Constants.Ots.DepositOts.AtmDeposit,
             TransactionAmount = amount,
             TransactionDescription = "Deposit",
-            TransactionStatus = "1"
+            TransactionStatus = "1",
+            TransactionId = request.TransactionId
         };
 
         var authorization =
@@ -203,8 +204,6 @@ public class AccountService
             );
 
         authorizationGuid = authorization.Guid;
-
-        throw new AbandonedMutexException();
         
         return ServiceResult<DepositResponse>.Success(
             new DepositResponse
@@ -235,119 +234,235 @@ public class AccountService
         throw;
     }
 }
-    
-    public async Task<ServiceResult<WithdrawResponse>> CashWithdrawAsync(WithdrawRequest withdrawRequest)
+
+    public async Task<ServiceResult<WithdrawResponse>> CashWithdrawAsync(
+    WithdrawRequest request)
+{
+    decimal amount = request.Amount!.Value;
+
+    if (decimal.Round(amount, 2) != amount)
     {
-        
-        if (decimal.Round(withdrawRequest.Amount!.Value, 2) != withdrawRequest.Amount)
-        {
-            return ServiceResult<WithdrawResponse>.Failure(
-                Errors.PrecisionError, 403);
-        }
-        
-        if (withdrawRequest.Amount < 0)
-        {
-            return ServiceResult<WithdrawResponse>.Failure(
-                Errors.NegativeAmountError, 403);
-        }
-        
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE ACCOUNT
-             SET BALANCE = BALANCE - {withdrawRequest.Amount}
-             WHERE ACCOUNT_NO = {withdrawRequest.AccountNo} AND BALANCE >= {withdrawRequest.Amount}
-             """
+        return ServiceResult<WithdrawResponse>.Failure(
+            Errors.PrecisionError,
+            StatusCodes.Status400BadRequest
         );
-
-        if (affectedRows == 0)
-        {
-            return ServiceResult<WithdrawResponse>.Failure(Errors.InsufficientFundsError);
-        }
-        
-        var account = await _context.Accounts.FirstOrDefaultAsync
-            (account => account.AccountNo == withdrawRequest.AccountNo);
-
-        if (account != null)
-        {
-            
-            var authRequest = new CreateAuthorizationRequest
-            {
-                AccountNo = account.AccountNo,
-                Balance = account.Balance,
-                CardToken = null,
-                ChannelCode = withdrawRequest.ChannelCode,
-                CustomerId = account.CustomerId,
-                Otc = Constants.Otcs.Withdrawal,
-                Ots = Constants.Ots.WithdrawalOts.CashWithdrawal,
-                TransactionAmount = withdrawRequest.Amount,
-                TransactionDescription = "withdrawal",
-                TransactionStatus = "1"
-            };
-
-            var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
-            WithdrawResponse response = new WithdrawResponse
-            {
-                TransactionAmount = authResponse.TransactionAmount,
-                Balance = authResponse.Balance,
-                TransactionTime = authResponse.TransactionDate
-            };
-            return ServiceResult<WithdrawResponse>.Success(response);
-        }
-        else return ServiceResult<WithdrawResponse>.Failure(Errors.AccountNotFoundError);
     }
-    
-        public async Task<ServiceResult<WithdrawResponse>> FastWithdrawAsync(WithdrawRequest withdrawRequest)
+
+    if (amount <= 0)
     {
-        
-        if (decimal.Round(withdrawRequest.Amount!.Value, 2) != withdrawRequest.Amount)
-        {
-            return ServiceResult<WithdrawResponse>.Failure(
-                Errors.PrecisionError, 403);
-        }
-        
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE ACCOUNT
-             SET BALANCE = BALANCE - {withdrawRequest.Amount}
-             WHERE ACCOUNT_NO = {withdrawRequest.AccountNo} AND BALANCE >= {withdrawRequest.Amount}
-             """
+        return ServiceResult<WithdrawResponse>.Failure(
+            Errors.NegativeAmountError,
+            StatusCodes.Status400BadRequest
         );
+    }
+
+    var account = await _context.Accounts
+        .FirstOrDefaultAsync(
+            account => account.AccountNo == request.AccountNo
+        );
+
+    if (account is null)
+    {
+        return ServiceResult<WithdrawResponse>.Failure(
+            Errors.AccountNotFoundError,
+            StatusCodes.Status404NotFound
+        );
+    }
+
+    bool withdrawalMade = false;
+    string? authorizationGuid = null;
+
+    try
+    {
+        int affectedRows =
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                UPDATE ACCOUNT
+                SET BALANCE = BALANCE - {amount}
+                WHERE ACCOUNT_NO = {request.AccountNo}
+                  AND BALANCE >= {amount}
+                """
+            );
 
         if (affectedRows == 0)
         {
-            return ServiceResult<WithdrawResponse>.Failure(Errors.InsufficientFundsError);
+            return ServiceResult<WithdrawResponse>.Failure(
+                Errors.InsufficientFundsError
+            );
         }
-        
-        var account = await _context.Accounts.FirstOrDefaultAsync
-            (account => account.AccountNo == withdrawRequest.AccountNo);
 
-        if (account != null)
+        withdrawalMade = true;
+
+        // account was loaded before the raw SQL update,
+        // so refresh its Balance from the database.
+        await _context.Entry(account).ReloadAsync();
+
+        var authorizationRequest = new CreateAuthorizationRequest
         {
-            
-            var authRequest = new CreateAuthorizationRequest
-            {
-                AccountNo = account.AccountNo,
-                Balance = account.Balance,
-                CardToken = null,
-                ChannelCode = withdrawRequest.ChannelCode,
-                CustomerId = account.CustomerId,
-                Otc = Constants.Otcs.Withdrawal,
-                Ots = Constants.Ots.WithdrawalOts.FastWihtdrawal,
-                TransactionAmount = withdrawRequest.Amount,
-                TransactionDescription = "fast withdrawal",
-                TransactionStatus = "1"
-            };
+            AccountNo = account.AccountNo,
+            Balance = account.Balance,
+            CardToken = null,
+            ChannelCode = request.ChannelCode,
+            CustomerId = account.CustomerId,
+            Otc = Constants.Otcs.Withdrawal,
+            Ots = Constants.Ots.WithdrawalOts.CashWithdrawal,
+            TransactionAmount = amount,
+            TransactionDescription = "Withdrawal",
+            TransactionStatus = "1",
+            TransactionId = request.TransactionId
+        };
 
-            var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
-            WithdrawResponse response = new WithdrawResponse
+        var authorization =
+            await _authorizationClient.CreateAuthorizationAsync(
+                authorizationRequest
+            );
+
+        authorizationGuid = authorization.Guid;
+
+        return ServiceResult<WithdrawResponse>.Success(
+            new WithdrawResponse
             {
-                TransactionAmount = authResponse.TransactionAmount,
-                Balance = authResponse.Balance,
-                TransactionTime = authResponse.TransactionDate
-            };
-            return ServiceResult<WithdrawResponse>.Success(response);
+                TransactionAmount = authorization.TransactionAmount,
+                Balance = authorization.Balance,
+                TransactionTime = authorization.TransactionDate,
+                TransactionId = request.TransactionId!.Value
+            }
+        );
+    }
+    catch (Exception exception)
+    {
+        _logger.LogError(
+            exception,
+            "Cash withdrawal failed. Starting compensation. " +
+            "AccountNo: {AccountNo}. TransactionId: {TransactionId}",
+            request.AccountNo,
+            request.TransactionId
+        );
+
+        await CompensateWithdrawAsync(
+            request.AccountNo,
+            amount,
+            authorizationGuid,
+            withdrawalMade
+        );
+
+        throw;
+    }
+}
+    
+    public async Task<ServiceResult<WithdrawResponse>> FastWithdrawAsync(WithdrawRequest request)
+    {
+        
+    decimal amount = request.Amount!.Value;
+
+    if (decimal.Round(amount, 2) != amount)
+    {
+        return ServiceResult<WithdrawResponse>.Failure(
+            Errors.PrecisionError,
+            StatusCodes.Status400BadRequest
+        );
+    }
+
+    if (amount <= 0)
+    {
+        return ServiceResult<WithdrawResponse>.Failure(
+            Errors.NegativeAmountError,
+            StatusCodes.Status400BadRequest
+        );
+    }
+
+    var account = await _context.Accounts
+        .FirstOrDefaultAsync(
+            account => account.AccountNo == request.AccountNo
+        );
+
+    if (account is null)
+    {
+        return ServiceResult<WithdrawResponse>.Failure(
+            Errors.AccountNotFoundError,
+            StatusCodes.Status404NotFound
+        );
+    }
+
+    bool withdrawalMade = false;
+    string? authorizationGuid = null;
+
+    try
+    {
+        int affectedRows =
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                UPDATE ACCOUNT
+                SET BALANCE = BALANCE - {amount}
+                WHERE ACCOUNT_NO = {request.AccountNo}
+                  AND BALANCE >= {amount}
+                """
+            );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(
+                Errors.InsufficientFundsError
+            );
         }
-        else return ServiceResult<WithdrawResponse>.Failure(Errors.InsufficientFundsError);
+
+        withdrawalMade = true;
+
+        // account was loaded before the raw SQL update,
+        // so refresh its Balance from the database.
+        await _context.Entry(account).ReloadAsync();
+
+        var authorizationRequest = new CreateAuthorizationRequest
+        {
+            AccountNo = account.AccountNo,
+            Balance = account.Balance,
+            CardToken = null,
+            ChannelCode = request.ChannelCode,
+            CustomerId = account.CustomerId,
+            Otc = Constants.Otcs.Withdrawal,
+            Ots = Constants.Ots.WithdrawalOts.FastWihtdrawal,
+            TransactionAmount = amount,
+            TransactionDescription = "Fast Withdrawal",
+            TransactionStatus = "1",
+            TransactionId = request.TransactionId
+        };
+
+        var authorization =
+            await _authorizationClient.CreateAuthorizationAsync(
+                authorizationRequest
+            );
+
+        authorizationGuid = authorization.Guid;
+
+        return ServiceResult<WithdrawResponse>.Success(
+            new WithdrawResponse
+            {
+                TransactionAmount = authorization.TransactionAmount,
+                Balance = authorization.Balance,
+                TransactionTime = authorization.TransactionDate,
+                TransactionId = request.TransactionId!.Value
+            }
+        );
+    }
+    catch (Exception exception)
+    {
+        _logger.LogError(
+            exception,
+            "Fast withdrawal failed. Starting compensation. " +
+            "AccountNo: {AccountNo}. TransactionId: {TransactionId}",
+            request.AccountNo,
+            request.TransactionId
+        );
+
+        await CompensateWithdrawAsync(
+            request.AccountNo,
+            amount,
+            authorizationGuid,
+            withdrawalMade
+        );
+
+        throw;
+    }
     }
 
     public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string accountNo)
@@ -374,6 +489,44 @@ public class AccountService
         return ServiceResult<Unit>.Success(new Unit());
     }
     
+    public async Task<bool> CheckExistenceByAccountNoAsync(string accountNo)
+    {
+        return await _context.Accounts.AnyAsync(account => account.AccountNo == accountNo);
+    }
+
+    //should be called from authorization
+    public async Task<ServiceResult<SaleResponse>> SaleAsync(SaleRequest request)
+    {
+        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE ACCOUNT
+             SET BALANCE = BALANCE - {request.Amount}
+             WHERE ACCOUNT_NO = {request.AccountNo} AND BALANCE >= {request.Amount}
+             """
+        );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<SaleResponse>.Failure(Errors.InsufficientFundsError);
+        }
+        
+        var account = await _context.Accounts.FirstOrDefaultAsync
+            (account => account.AccountNo == request.AccountNo);
+
+        if (account == null)
+        {
+            return ServiceResult<SaleResponse>.Failure(Errors.UnexpectedError);
+        }
+        
+        SaleResponse response = new SaleResponse
+        {
+            TransactionId = request.TransactionId!.Value,
+            Balance = account.Balance,
+            CustomerId = account.CustomerId
+        };
+        return ServiceResult<SaleResponse>.Success(response);
+    }
+    
     private async Task<long> GetNextAccountNoSequenceValueAsync()
     {
         var connection = _context.Database.GetDbConnection();
@@ -389,11 +542,6 @@ public class AccountService
         var result = await command.ExecuteScalarAsync();
 
         return Convert.ToInt64(result);
-    }
-    
-    public async Task<bool> CheckExistenceByAccountNoAsync(string accountNo)
-    {
-        return await _context.Accounts.AnyAsync(account => account.AccountNo == accountNo);
     }
     
     private async Task CompensateDepositAsync(
@@ -479,6 +627,75 @@ public class AccountService
                     exception,
                     "Limit compensation failed. CustomerId: {CustomerId}",
                     limitRequest.CustomerId
+                );
+            }
+        }
+    }
+    
+    private async Task CompensateWithdrawAsync(
+        string accountNo,
+        decimal amount,
+        string? authorizationGuid,
+        bool depositMade
+        )
+    {
+        // Reverse order of completed operations.
+
+        if (authorizationGuid is not null)
+        {
+            try
+            {
+                var result = await _authorizationClient.AssignStatusAsync(
+                    authorizationGuid,
+                    "0"
+                );
+
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Authorization compensation failed. Guid: {Guid}",
+                        authorizationGuid
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Authorization compensation threw an exception. Guid: {Guid}",
+                    authorizationGuid
+                );
+            }
+        }
+
+        if (depositMade)
+        {
+            try
+            {
+                int affectedRows =
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"""
+                        UPDATE ACCOUNT
+                        SET BALANCE = BALANCE + {amount}
+                        WHERE ACCOUNT_NO = {accountNo}
+                        """,
+                        CancellationToken.None
+                    );
+
+                if (affectedRows == 0)
+                {
+                    _logger.LogError(
+                        "Deposit compensation failed. AccountNo: {AccountNo}",
+                        accountNo
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Deposit compensation threw an exception. AccountNo: {AccountNo}",
+                    accountNo
                 );
             }
         }

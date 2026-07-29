@@ -43,5 +43,7 @@ public enum ErrorCode
     AuthClientErr,
     AuthCompensateErr,
     ChargeLimitCreateErr,
-    SpendingLimitCreateErr
+    SpendingLimitCreateErr,
+    CardClientErr,
+    AccountSaleErr
 }

@@ -21,7 +21,7 @@ public class AccountClient
             CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.PostAsJsonAsync(
-            "/api/limit",
+            "/api/charge-limit",
             request,
             cancellationToken
         );

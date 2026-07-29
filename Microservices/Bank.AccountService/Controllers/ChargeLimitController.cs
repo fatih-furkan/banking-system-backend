@@ -7,12 +7,12 @@ using Microsoft.AspNetCore.Mvc;
 namespace Bank.AccountService.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
-public class LimitController : Controller
+[Route("api/charge-limit")]
+public class ChargeLimitController : Controller
 {
     private readonly LimitService _limitService;
 
-    public LimitController(LimitService limitService)
+    public ChargeLimitController(LimitService limitService)
     {
         _limitService = limitService;
     }

@@ -72,4 +72,7 @@ public class CreateAuthorizationRequest
             
     )]
     public decimal? TransactionAmount { get; set; }
+    
+    [Required]
+    public long? TransactionId { get; set; }
 }

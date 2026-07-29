@@ -214,4 +214,14 @@ public static class Errors
         new(
             ErrorCode.SpendingLimitCreateErr,
             Constants.ExceptionMessages.SpendingLimitCreateError);
+    
+    public static readonly Error CardClientError =
+        new(
+            ErrorCode.CardClientErr,
+            Constants.ExceptionMessages.CardClientError);
+    
+    public static readonly Error AccountSaleError =
+        new(
+            ErrorCode.AccountSaleErr,
+            Constants.ExceptionMessages.AccountSaleError);
 }

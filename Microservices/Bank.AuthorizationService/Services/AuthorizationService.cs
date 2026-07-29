@@ -1,8 +1,12 @@
-﻿using Bank.AuthorizationService.Data;
+﻿using Bank.AuthorizationService.Clients;
+using Bank.AuthorizationService.Data;
 using Bank.AuthorizationService.Models;
+using Bank.AuthorizationService.Models.Dtos;
+using Bank.AuthorizationService.Models.Dtos.ClientDtos;
 using Bank.AuthorizationService.Models.Entities;
 using Bank.Shared;
 using Bank.Shared.Constants;
+using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bank.AuthorizationService.Services;
@@ -10,10 +14,16 @@ namespace Bank.AuthorizationService.Services;
 public class AuthorizationService
 {
     private readonly AppDbContext _context;
+    private readonly CardClient _cardClient;
+    private readonly AccountClient _accountClient;
     
-    public AuthorizationService(AppDbContext context)
+    public AuthorizationService(AppDbContext context, 
+        CardClient cardClient,
+        AccountClient accountClient)
     {
         _context = context;
+        _cardClient = cardClient;
+        _accountClient = accountClient;
     }
     
     public async Task<List<Authorization>> GetAllAuthorizationsAsync()
@@ -37,7 +47,8 @@ public class AuthorizationService
             TransactionAmount = createAuthorizationRequest.TransactionAmount,
             TransactionDate = DateTime.UtcNow,
             TransactionStatus = createAuthorizationRequest.TransactionStatus,
-            TransactionDescription = createAuthorizationRequest.TransactionDescription
+            TransactionDescription = createAuthorizationRequest.TransactionDescription,
+            TransactionId = createAuthorizationRequest.TransactionId
         };
         
         _context.Add(auth);
@@ -56,7 +67,8 @@ public class AuthorizationService
             TransactionAmount = auth.TransactionAmount,
             TransactionDate = auth.TransactionDate,
             TransactionStatus = auth.TransactionStatus,
-            TransactionDescription = auth.TransactionDescription
+            TransactionDescription = auth.TransactionDescription,
+            TransactionId = auth.TransactionId!.Value
         };
         return ServiceResult<CreateAuthorizationResponse>.Success(response);
     }
@@ -84,4 +96,80 @@ public class AuthorizationService
         await _context.SaveChangesAsync();
         return ServiceResult<Unit>.Success(new Unit());
     }
+
+    public async Task<ServiceResult<SaleResponse>> SaleAsync(SaleRequest request)
+    {
+        if (decimal.Round(request.Amount!.Value, 2) != request.Amount)
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                Errors.PrecisionError, 403);
+        }
+        
+        if (request.Amount < 0)
+        {
+            return ServiceResult<SaleResponse>.Failure(
+            Errors.NegativeAmountError, 403);
+        }
+
+        if (request.ChannelCode != ChannelCode.Fast
+            && request.ChannelCode != ChannelCode.Online
+            && request.ChannelCode != ChannelCode.Pos)
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                Errors.UnauthorizedChannelError, 403);
+        }
+        var accountNoResult = await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
+        if (!accountNoResult.IsSuccess || accountNoResult.Data == null)
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                Errors.AccountNotFoundError, 403);
+        }
+
+        string accountNo = accountNoResult.Data;
+
+        
+        var accountSaleResult = await _accountClient.AccountSaleAsync(new AccountSaleRequest
+        {
+            AccountNo = accountNo,
+            Amount = request.Amount,
+            TransactionId = request.TransactionId
+        });
+
+        if (!accountSaleResult.IsSuccess || accountSaleResult.Data == null)
+        {
+            //todo compensate eklenebilir mi?
+            
+            return ServiceResult<SaleResponse>.Failure(
+                Errors.AccountSaleError, 403);
+        }
+        
+        var authRequest = new CreateAuthorizationRequest
+        {
+            AccountNo = accountNo,
+            Balance = accountSaleResult.Data.Balance,
+            CardToken = null,
+            ChannelCode = request.ChannelCode!.Value,
+            CustomerId = accountSaleResult.Data.CustomerId,
+            Otc = Constants.Otcs.Sale,
+            Ots = Constants.Ots.SaleOts.Default,
+            TransactionAmount = request.Amount,
+            TransactionDescription = "sale",
+            TransactionStatus = "1",
+            TransactionId = request.TransactionId
+        };
+
+        var createAuthorizationResult = await CreateAuthorizationAsync(authRequest);
+        if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
+        {
+            //todo compensate
+        }
+
+        return ServiceResult<SaleResponse>.Success(new SaleResponse
+        {
+            Balance = accountSaleResult.Data.Balance,
+            TransactionAmount = request.Amount.Value,
+            TransactionTime = DateTime.UtcNow
+        });
+    }
+    
 }

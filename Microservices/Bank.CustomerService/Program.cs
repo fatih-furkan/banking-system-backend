@@ -3,6 +3,7 @@ using Bank.CustomerService.Clients;
 using Bank.CustomerService.Data;
 using Bank.CustomerService.Services;
 using Bank.Shared;
+using Bank.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,12 +31,24 @@ builder.Services.AddScoped<CustomerService>();
 
 builder.Services.AddHttpClient<AccountClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:7000");
+    string baseAddress =
+        builder.Configuration["Services:AccountService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.AccountServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
 });
 
 builder.Services.AddHttpClient<AuthorizationClient>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:7006");
+    string baseAddress =
+        builder.Configuration["Services:AuthorizationService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.AuthorizationServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
 });
 
 

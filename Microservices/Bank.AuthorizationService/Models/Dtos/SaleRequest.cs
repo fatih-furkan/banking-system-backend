@@ -1,17 +1,20 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bank.Shared.Enums;
 
-namespace Bank.AccountService.Models.Dtos.Account;
+namespace Bank.AuthorizationService.Models.Dtos;
 
-public class WithdrawRequest
+public class SaleRequest
 {
     [Required]
     public decimal? Amount { get; set; }
     
-    public string AccountNo { get; set; } = null!;
+    [StringLength(16, MinimumLength = 16)]
+    public string CardNo { get; set; } = null!;
     
     [Required]
     public ChannelCode? ChannelCode { get; set; }
+    
+    public string? MerchantName { get; set; }
     
     [Required]
     public long? TransactionId { get; set; }

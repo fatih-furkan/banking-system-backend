@@ -27,4 +27,6 @@ public class CreateAuthorizationResponse
     public decimal? Balance { get; set; }
 
     public decimal? TransactionAmount { get; set; }
+    
+    public long TransactionId { get; set; }
 }

@@ -113,4 +113,16 @@ public class AccountController: ControllerBase
         bool exists = await _accountService.CheckExistenceByAccountNoAsync(accountNo);
         return Ok(exists);
     }
+
+    [HttpPost("sale")]
+    public async Task<IActionResult> Sale(SaleRequest request)
+    {
+        var result = await _accountService.SaleAsync(request);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(403, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
 }

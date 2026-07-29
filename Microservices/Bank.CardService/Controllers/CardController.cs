@@ -78,4 +78,15 @@ public class CardController: ControllerBase
         }
         else return StatusCode(400, new ErrorResponse(Errors.CardNotExistError));
     }
+
+    [HttpGet("find-account-no/{cardNo}")]
+    public async Task<IActionResult> FindAccountNoByCardNo(string cardNo)
+    {
+        var result = await _cardService.FindAccountNoByCardNo(cardNo);
+        if (result.IsSuccess)
+        {
+            return new JsonResult(result.Data);
+        }
+        else return StatusCode(403, new ErrorResponse(result.Error));
+    }
 }

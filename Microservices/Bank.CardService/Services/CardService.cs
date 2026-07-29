@@ -107,4 +107,15 @@ public class CardService
             throw;
         }
     }
+
+    public async Task<ServiceResult<string>> FindAccountNoByCardNo(string cardNo)
+    {
+        var card = await _context.Cards.SingleOrDefaultAsync(card => card.CardNo == cardNo);
+        if (card == null)
+        {
+            return ServiceResult<string>.Failure(Errors.CardNotExistError);
+        }
+
+        return ServiceResult<string>.Success(card.CardAccountNo);
+    }
 }

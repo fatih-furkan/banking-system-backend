@@ -7,7 +7,12 @@ public class DepositRequest
 {
     [Required]
     public decimal? Amount { get; set; }
+    
     public string AccountNo { get; set; } = null!;
+    
     [Required]
     public ChannelCode? ChannelCode { get; set; }
+    
+    [Required]
+    public long? TransactionId { get; set; }
 }

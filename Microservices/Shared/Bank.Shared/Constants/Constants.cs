@@ -8,6 +8,7 @@ public class Constants
         public const int Withdrawal = 20;
         public const int Refund = 30;
         public const int Payment = 40;
+        public const int Sale = 50;
     }
 
     public static class Ots
@@ -22,6 +23,11 @@ public class Constants
         {
             public const int BranchDeposit = 10;
             public const int AtmDeposit = 20;
+        }
+        
+        public class SaleOts
+        {
+            public const int Default = 10;
         }
     }
 
@@ -75,5 +81,12 @@ public class Constants
         public const string AuthCompensateError = "Authorization compensation process is failed.";
         public const string ChargeLimitCreateError = "Charge limit could not be created.";
         public const string SpendingLimitCreateError = "Spending limit could not be created.";
+        public const string CardClientError = "Card client got unsuccessful response.";
+
+        public const string CustomerServiceUrlError = "CustomerService URL is not configured.";
+        public const string AccountServiceUrlError = "AccountService URL is not configured.";
+        public const string CardServiceUrlError = "CardService URL is not configured.";
+        public const string AuthorizationServiceUrlError = "AuthorizationService URL is not configured.";
+        public const string AccountSaleError = "Account sale did not answer as expected.";
     }
 }

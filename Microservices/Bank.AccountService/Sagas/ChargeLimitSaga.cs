@@ -27,7 +27,7 @@ public class ChargeLimitSaga
         if (!useChargeLimitResult.IsSuccess || useChargeLimitResult.Data == null)
         {
             return ServiceResult<UseChargeLimitResponse>
-                .Failure(Errors.AccountCreateError);
+                .Failure(useChargeLimitResult.Error ?? Errors.UnexpectedError);
         }
         else return ServiceResult<UseChargeLimitResponse>.Success(useChargeLimitResult.Data);
     }
