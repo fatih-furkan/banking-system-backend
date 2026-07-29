@@ -30,7 +30,7 @@ public class CustomerService
         bool onlyDigits = createCustomerRequest.Tc.All(char.IsDigit);
         if (!onlyDigits)
         {
-            return ServiceResult<CreateCustomerResponse>.Failure("The tc is wrong.");
+            return ServiceResult<CreateCustomerResponse>.Failure(Constants.ExceptionMessages.TcError);
         }
         
         //Is the tc unique?
@@ -60,7 +60,7 @@ public class CustomerService
             return ServiceResult<CreateCustomerResponse>.Success(response);
         }
 
-        return ServiceResult<CreateCustomerResponse>.Failure("The tc is already assigned to another user.");
+        return ServiceResult<CreateCustomerResponse>.Failure(Constants.ExceptionMessages.TcAssignedError);
     } 
 
     private async Task<long> GetNextCustomerIdSequenceValueAsync()
@@ -82,7 +82,8 @@ public class CustomerService
     
     public async Task<bool> DeleteCustomerAsync(long customerId)
     {
-        var customer = await _context.Customers.FirstOrDefaultAsync(customer => customer.CustomerId == customerId);
+        var customer = await _context.Customers
+            .FirstOrDefaultAsync(customer => customer.CustomerId == customerId);
         if (customer != null)
         {
             _context.Customers.Remove(customer);

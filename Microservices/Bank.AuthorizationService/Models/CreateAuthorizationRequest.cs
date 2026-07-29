@@ -1,4 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection.Metadata;
+using Bank.Shared;
 using Bank.Shared.Enums;
 
 namespace Bank.AuthorizationService.Models;
@@ -7,47 +9,47 @@ public class CreateAuthorizationRequest
 {
     [StringLength(
         3,
-        ErrorMessage = "Transaction status is too long"
+        ErrorMessage = Constants.ExceptionMessages.TransactionStatusLong
     )]
     public string? TransactionStatus { get; set; }
 
     [Range(
         1,
         long.MaxValue,
-        ErrorMessage = "Customer ID should be greater than 0."
+        ErrorMessage = Constants.ExceptionMessages.CustomerIdShort
     )]
     public long CustomerId { get; set; }
 
     [StringLength(
         100,
-        ErrorMessage = "Card token is too long."
+        ErrorMessage = Constants.ExceptionMessages.CardTokenLong
     )]
     public string? CardToken { get; set; }
 
     [Range(
         0,
         9999,
-        ErrorMessage = "OTC must be in range 0-9999."
+        ErrorMessage = Constants.ExceptionMessages.InvalidOtc
     )]
     public int Otc { get; set; }
 
     [Range(
         0,
         9999,
-        ErrorMessage = "OTS must be in range 0-9999."
+        ErrorMessage = Constants.ExceptionMessages.InvalidOts
     )]
     public int Ots { get; set; }
 
     [StringLength(
         50,
-        ErrorMessage = "Transaction description is too long."
+        ErrorMessage = Constants.ExceptionMessages.TransactionDescriptionLong
     )]
     public string? TransactionDescription { get; set; }
 
     [StringLength(
         8,
         MinimumLength = 8,
-        ErrorMessage = "Account number should be 8 characters length."
+        ErrorMessage = Constants.ExceptionMessages.AccountNoLengthError
     )]
     public string? AccountNo { get; set; }
     
@@ -57,7 +59,7 @@ public class CreateAuthorizationRequest
         typeof(decimal),
         "0",
         "9999999999999999.99",
-        ErrorMessage = "Balance has an invalid value."
+        ErrorMessage = Constants.ExceptionMessages.InvalidBalance
     )]
     public decimal? Balance { get; set; }
 
@@ -65,8 +67,8 @@ public class CreateAuthorizationRequest
         typeof(decimal),
         "0.01",
         "9999999999999999.99",
-        ErrorMessage =
-            "Transaction amount has an invalid value."
+        ErrorMessage = Constants.ExceptionMessages.InvalidTransactionAmount
+            
     )]
     public decimal? TransactionAmount { get; set; }
 }

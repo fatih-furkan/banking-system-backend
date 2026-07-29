@@ -1,4 +1,5 @@
 ﻿using Bank.AccountService.Models.ClientModels;
+using Bank.Shared;
 
 namespace Bank.AccountService.Clients;
 
@@ -32,7 +33,7 @@ public class AuthorizationClient
 
         return authorization
                ?? throw new InvalidOperationException(
-                   "AuthorizationService response is invalid."
+                   Constants.ExceptionMessages.AuthorizationServiceResponseError
                );
     }
 }

@@ -46,7 +46,7 @@ public class CardService
     //should only be called from the saga.
     public async Task<ServiceResult<CreateCardResponse>> CreateCardAsync(CreateCardRequest request)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(request.CustomerId);
+        bool customerExists = await _customerClient.CustomerExistsAsync(request.CustomerId.Value);
         if (!customerExists)
         {
             return ServiceResult<CreateCardResponse>.Failure("Customer does not exist!");
@@ -71,7 +71,7 @@ public class CardService
             CardToken = cardToken,
             CardNo = cardNo,
             CardAccountNo = request.AccountNo,
-            CustomerId = request.CustomerId
+            CustomerId = request.CustomerId.Value
         };
         
         _context.Cards.Add(card);
@@ -147,7 +147,7 @@ public class CardService
     private static int CalculateLuhnCheckDigit(string numberWithoutCheckDigit)
     {
         if (string.IsNullOrWhiteSpace(numberWithoutCheckDigit))
-            throw new ArgumentException("Number is empty");
+            throw new ArgumentException(Constants.ExceptionMessages.InvalidNumber);
 
         int sum = 0;
         bool shouldDouble = true;
@@ -155,7 +155,7 @@ public class CardService
         for (int i = numberWithoutCheckDigit.Length - 1; i >= 0; i--)
         {
             if (!char.IsDigit(numberWithoutCheckDigit[i]))
-                throw new ArgumentException("The alleged number contains non numeric characters.");
+                throw new ArgumentException(Constants.ExceptionMessages.NumberContainsChar);
 
             int digit = numberWithoutCheckDigit[i] - '0';
 

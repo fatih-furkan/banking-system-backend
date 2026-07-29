@@ -37,12 +37,12 @@ public class AccountService
     public async Task<ServiceResult<CreateAccountResponse?>> AddAccountAsync(
         CreateAccountRequest createAccountRequest)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(createAccountRequest.CustomerId);
+        bool customerExists = await _customerClient.CustomerExistsAsync(createAccountRequest.CustomerId.Value);
         
         if(!customerExists)
         {
             return ServiceResult<CreateAccountResponse?>
-                .Failure("The user does not exist.");
+                .Failure(Constants.ExceptionMessages.UserNotExistError);
         }
         else
         {
@@ -51,7 +51,7 @@ public class AccountService
             {
                 AccountNo = accountNo.ToString(),
                 BranchCode = createAccountRequest.BranchCode,
-                CustomerId = createAccountRequest.CustomerId,
+                CustomerId = createAccountRequest.CustomerId.Value,
                 Status = createAccountRequest.Status,
                 Balance = 0
             };
@@ -87,12 +87,18 @@ public class AccountService
         if (depositRequest.ChannelCode == ChannelCode.Pos)
         {
             return ServiceResult<DepositResponse>.Failure(
-                "Unauthorized channel.", 403);
+                Constants.ExceptionMessages.UnauthorizedChannel, 403);
         }
-        if (decimal.Round(depositRequest.Amount, 2) != depositRequest.Amount)
+        if (decimal.Round(depositRequest.Amount.Value, 2) != depositRequest.Amount)
         {
             return ServiceResult<DepositResponse>.Failure(
-                "The amount can have at most two decimal places.", 403);
+                Constants.ExceptionMessages.PrecisionError, 403);
+        }
+
+        if (depositRequest.Amount < 0)
+        {
+            return ServiceResult<DepositResponse>.Failure(
+                Constants.ExceptionMessages.NegativeAmountError, 403);
         }
         
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -105,7 +111,7 @@ public class AccountService
 
         if (affectedRows == 0)
         {
-            return ServiceResult<DepositResponse>.Failure("Account does not exist.");
+            return ServiceResult<DepositResponse>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
         }
         
         var account = await _context.Accounts.FirstOrDefaultAsync
@@ -118,7 +124,7 @@ public class AccountService
                 AccountNo = account.AccountNo,
                 Balance = account.Balance,
                 CardToken = null,
-                ChannelCode = depositRequest.ChannelCode,
+                ChannelCode = depositRequest.ChannelCode.Value,
                 CustomerId = account.CustomerId,
                 Otc = Constants.Otcs.Deposit,
                 Ots = depositRequest.ChannelCode == ChannelCode.Branch 
@@ -137,16 +143,22 @@ public class AccountService
             };
             return ServiceResult<DepositResponse>.Success(response);
         }
-        else return ServiceResult<DepositResponse>.Failure("Account does not exist.");
+        else return ServiceResult<DepositResponse>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
     }
     
     public async Task<ServiceResult<WithdrawResponse>> CashWithdrawAsync(WithdrawRequest withdrawRequest)
     {
         
-        if (decimal.Round(withdrawRequest.Amount, 2) != withdrawRequest.Amount)
+        if (decimal.Round(withdrawRequest.Amount.Value, 2) != withdrawRequest.Amount)
         {
             return ServiceResult<WithdrawResponse>.Failure(
-                "The amount can have at most two decimal places.", 403);
+                Constants.ExceptionMessages.PrecisionError, 403);
+        }
+        
+        if (withdrawRequest.Amount < 0)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(
+                Constants.ExceptionMessages.NegativeAmountError, 403);
         }
         
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -159,7 +171,7 @@ public class AccountService
 
         if (affectedRows == 0)
         {
-            return ServiceResult<WithdrawResponse>.Failure("Account does not exist or has insufficient funds.");
+            return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.InsufficientFundsError);
         }
         
         var account = await _context.Accounts.FirstOrDefaultAsync
@@ -191,16 +203,16 @@ public class AccountService
             };
             return ServiceResult<WithdrawResponse>.Success(response);
         }
-        else return ServiceResult<WithdrawResponse>.Failure("Account does not exist.");
+        else return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
     }
     
         public async Task<ServiceResult<WithdrawResponse>> FastWithdrawAsync(WithdrawRequest withdrawRequest)
     {
         
-        if (decimal.Round(withdrawRequest.Amount, 2) != withdrawRequest.Amount)
+        if (decimal.Round(withdrawRequest.Amount.Value, 2) != withdrawRequest.Amount)
         {
             return ServiceResult<WithdrawResponse>.Failure(
-                "The amount can have at most two decimal places.", 403);
+                Constants.ExceptionMessages.PrecisionError, 403);
         }
         
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -213,7 +225,7 @@ public class AccountService
 
         if (affectedRows == 0)
         {
-            return ServiceResult<WithdrawResponse>.Failure("Account does not exist or has insufficient funds.");
+            return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.InsufficientFundsError);
         }
         
         var account = await _context.Accounts.FirstOrDefaultAsync
@@ -245,7 +257,7 @@ public class AccountService
             };
             return ServiceResult<WithdrawResponse>.Success(response);
         }
-        else return ServiceResult<WithdrawResponse>.Failure("Account does not exist.");
+        else return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.InsufficientFundsError);
     }
 
     public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string accountNo)
@@ -256,7 +268,7 @@ public class AccountService
         
         if (!isOnlyDigits)
         {
-            return ServiceResult<Unit>.Failure("Status cannot contain letters.");
+            return ServiceResult<Unit>.Failure(Constants.ExceptionMessages.InvalidStatusError);
         }
         
         var account = await _context.Accounts
@@ -264,7 +276,7 @@ public class AccountService
         
         if (account == null)
         {
-            return ServiceResult<Unit>.Failure("Account does not exist");
+            return ServiceResult<Unit>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
         }
         
         account.Status = request.Status;

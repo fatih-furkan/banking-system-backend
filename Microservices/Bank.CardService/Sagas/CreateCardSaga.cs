@@ -31,7 +31,7 @@ public sealed class CreateCardSaga
             if (!createAccountResult.IsSuccess || createAccountResult.Data == null)
             {
                 return ServiceResult<CreateCardResponse>
-                    .Failure("Account could not be created.");
+                    .Failure(Constants.ExceptionMessages.AccountCreateError);
             }
             else accountNo = createAccountResult.Data.AccountNo;
 
@@ -56,7 +56,7 @@ public sealed class CreateCardSaga
         {
             _logger.LogError(
                 e,
-                "Create card saga failed."
+                Constants.ExceptionMessages.CardSagaError
             );
 
             await CompensateAsync(accountNo);
@@ -78,7 +78,7 @@ public sealed class CreateCardSaga
         {
             _logger.LogError(
                 exception,
-                "Account compensation failed. AccountId: {AccountId}",
+                Constants.ExceptionMessages.AccountCompensationError(accountNo),
                 accountNo
             );
         }

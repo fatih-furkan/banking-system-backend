@@ -11,12 +11,13 @@ public class CreateAuthorizationRequest
     )]
     public string? TransactionStatus { get; set; }
 
+    [Required]
     [Range(
         1,
         long.MaxValue,
         ErrorMessage = "Customer ID should be greater than 0."
     )]
-    public long CustomerId { get; set; }
+    public long? CustomerId { get; set; }
 
     [StringLength(
         100,
@@ -24,19 +25,21 @@ public class CreateAuthorizationRequest
     )]
     public string? CardToken { get; set; }
 
+    [Required]
     [Range(
         0,
         9999,
         ErrorMessage = "OTC must be in range 0-9999."
     )]
-    public int Otc { get; set; }
+    public int? Otc { get; set; }
 
+    [Required]
     [Range(
         0,
         9999,
         ErrorMessage = "OTS must be in range 0-9999."
     )]
-    public int Ots { get; set; }
+    public int? Ots { get; set; }
 
     [StringLength(
         50,
@@ -57,7 +60,7 @@ public class CreateAuthorizationRequest
         MinimumLength = 1,
         ErrorMessage = "Channel code is too long."
     )]
-    public ChannelCode ChannelCode { get; set; }
+    public ChannelCode? ChannelCode { get; set; }
 
     [Range(
         typeof(decimal),

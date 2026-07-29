@@ -24,5 +24,44 @@ public class Constants
             public const int AtmDeposit = 20;
         }
     }
-    
+
+    public static class ExceptionMessages
+    {
+        public const string GetAccountError = "Error while getting the accounts";
+        public const string AccountNotFoundError = "Account could not be found.";
+        public const string AuthorizationServiceResponseError =
+            "AuthorizationService response is invalid.";
+
+        public const string UserNotExistError = "The user does not exist.";
+        public const string UnauthorizedChannel = "Unauthorized channel.";
+        public const string PrecisionError = "The amount can have at most two decimal places.";
+        public const string NegativeAmountError = "Amount cannot be negative.";
+        public const string InsufficientFundsError = "Account does not exist or has insufficient funds.";
+        public const string InvalidStatusError = "Status cannot contain letters.";
+        public const string AuthorizationGetError = "Error while getting the authorizations";
+        public const string TransactionStatusLong = "Transaction status is too long";
+        public const string CustomerIdShort = "Customer ID should be greater than 0.";
+        public const string CardTokenLong = "Card token is too long.";
+        public const string InvalidOtc = "OTC must be in range 0-9999.";
+        public const string InvalidOts = "OTS must be in range 0-9999.";
+        public const string TransactionDescriptionLong = "Transaction description is too long.";
+        public const string AccountNoLengthError = "Account number should be 8 characters length.";
+        public const string InvalidBalance = "Balance has an invalid value.";
+        public const string InvalidTransactionAmount = "Transaction amount has an invalid value.";
+        public const string BranchCodeLong = "Branch code is too long";
+        public const string BranchCodeEmpty = "Branch code cannot be empty";
+        public const string StatusLong = "Status is too long";
+        public const string StatusEmpty = "Status cannot be empty";
+        public const string InvalidNumber = "Number value is empty";
+        public const string NumberContainsChar = "The alleged number contains non numeric characters.";
+        public const string AccountCreateError = "Account could not be created.";
+        public const string CardSagaError = "Create card saga failed.";
+
+        public static string AccountCompensationError(string accountId) =>
+            $"Account compensation failed. AccountId: {accountId}";
+
+        public const string GetCustomerError = "Customer could not be found.";
+        public const string TcError = "The tc is wrong.";
+        public const string TcAssignedError = "The tc is already assigned to another user.";
+    }
 }

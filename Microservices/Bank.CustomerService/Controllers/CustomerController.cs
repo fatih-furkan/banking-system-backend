@@ -1,4 +1,5 @@
 ﻿using Bank.CustomerService.Models.Dtos;
+using Bank.Shared;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.CustomerService.Controllers;
@@ -24,7 +25,7 @@ public class CustomerController: ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Error while getting the accounts" + ex);
+            return StatusCode(500, Constants.ExceptionMessages.GetAccountError);
         }
     }
     
@@ -34,7 +35,7 @@ public class CustomerController: ControllerBase
         var customer = await _customerService.GetCustomerByCustomerIdAsync(customerId);
         if (customer == null)
         {
-            return NotFound("Customer could not be found.");
+            return NotFound(Constants.ExceptionMessages.GetCustomerError);
         }
         else return Ok(customer);
     }

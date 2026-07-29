@@ -1,4 +1,5 @@
 ﻿using Bank.AuthorizationService.Models;
+using Bank.Shared;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.AuthorizationService.Controllers;
@@ -24,7 +25,7 @@ public class AuthorizationController: ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Error while getting the authorizations" + ex);
+            return StatusCode(500, Constants.ExceptionMessages.AuthorizationGetError);
         }
     }
 

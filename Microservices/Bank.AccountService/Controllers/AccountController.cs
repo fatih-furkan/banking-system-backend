@@ -1,4 +1,5 @@
 ﻿using Bank.AccountService.Models.Dtos;
+using Bank.Shared;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.AccountService.Controllers;
@@ -24,7 +25,7 @@ public class AccountController: ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Error while getting the accounts" + ex);
+            return StatusCode(500, Constants.ExceptionMessages.GetAccountError);
         }
     }
 
@@ -34,7 +35,7 @@ public class AccountController: ControllerBase
         var account = await _accountService.GetAccountByAccountNoAsync(accountNo);
         if (account == null)
         {
-            return NotFound("Account could not be found.");
+            return NotFound(Constants.ExceptionMessages.AccountNotFoundError);
         }
         else return Ok(account);
     }
@@ -65,6 +66,7 @@ public class AccountController: ControllerBase
     [HttpPost("deposit")]
     public async Task<IActionResult> Deposit(DepositRequest depositRequest)
     {
+        
         var result = await _accountService.DepositAsync(depositRequest);
         if (result.Data == null)
         {

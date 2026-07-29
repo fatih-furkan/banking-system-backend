@@ -1,17 +1,19 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bank.Shared;
 
 namespace Bank.AccountService.Models.Dtos;
 
 public class CreateAccountRequest
 {
-    public int CustomerId { get; set; }
+    [Required]
+    public long? CustomerId { get; set; }
     
-    [MaxLength(3, ErrorMessage = "Branch code is too long")]
-    [MinLength(1, ErrorMessage = "Branch code cannot be empty")]
+    [MaxLength(3, ErrorMessage = Constants.ExceptionMessages.BranchCodeLong)]
+    [MinLength(1, ErrorMessage = Constants.ExceptionMessages.BranchCodeEmpty)]
     public string BranchCode { get; set; } = null!;
     
-    [MaxLength(2, ErrorMessage = "Status is too long")]
-    [MinLength(1, ErrorMessage = "Status cannot be empty")]
+    [MaxLength(2, ErrorMessage = Constants.ExceptionMessages.StatusLong)]
+    [MinLength(1, ErrorMessage = Constants.ExceptionMessages.StatusEmpty)]
     public string Status { get; set; } = null!; //Varsa 1 yoksa  0 gibi
 
 }
