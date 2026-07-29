@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Bank.CardService.Clients;
 using Bank.CardService.Data;
+using Bank.CardService.Sagas;
 using Bank.CardService.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -26,6 +27,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 builder.Services.AddScoped<CardService>();
+builder.Services.AddScoped<CreateCardSaga>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

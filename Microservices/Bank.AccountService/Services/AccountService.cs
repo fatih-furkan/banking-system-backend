@@ -289,4 +289,8 @@ public class AccountService
         return Convert.ToInt64(result);
     }
     
+    public async Task<bool> CheckExistenceByAccountNoAsync(string accountNo)
+    {
+        return await _context.Accounts.AnyAsync(account => account.AccountNo == accountNo);
+    }
 }

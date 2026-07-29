@@ -2,6 +2,7 @@
 
 public class CreateCardRequest
 {
-    public long customerId { get; set; }
-    public string branchCode { get; set; } = null!;
+    public long CustomerId { get; set; }
+    public string BranchCode { get; set; } = null!;
+    public string AccountNo { get; set; } = null!;
 }

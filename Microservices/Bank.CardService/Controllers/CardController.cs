@@ -1,4 +1,6 @@
 ﻿using Bank.CardService.Models.Dtos;
+using Bank.CardService.Models.Dtos.ClientDtos.SagaDtos;
+using Bank.CardService.Sagas;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.CardService.Controllers;
@@ -8,10 +10,12 @@ namespace Bank.CardService.Controllers;
 public class CardController: ControllerBase
 {
     private Services.CardService _cardService;
+    private readonly CreateCardSaga _createCardSaga;
 
-    public CardController(Services.CardService cardService)
+    public CardController(Services.CardService cardService, CreateCardSaga createCardSaga)
     {
         _cardService = cardService;
+        _createCardSaga = createCardSaga;
     }
     
     [HttpGet]
@@ -47,9 +51,9 @@ public class CardController: ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Add(CreateCardRequest createCardRequest)
+    public async Task<IActionResult> Add(CreateCardSagaRequest createCardSagaRequest)
     {
-        var result = await _cardService.AddCardAsync(createCardRequest);
+        var result = await _createCardSaga.ExecuteAsync(createCardSagaRequest);
         if (result.IsSuccess)
         {
             return StatusCode(201, result.Data);
@@ -65,8 +69,7 @@ public class CardController: ControllerBase
         bool belongs = await _cardService.CardBelongsToCustomer(cardToken, customerId);
         return Ok(belongs);
     }
-
-    //olusturulan hesap bagli oldugundan dolayi kart silinemiyor. ne yapmak gerek?
+    
     [HttpDelete("{cardToken}")]
     public async Task<IActionResult> Delete(string cardToken)
     {

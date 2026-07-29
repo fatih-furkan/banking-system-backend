@@ -109,4 +109,11 @@ public class AccountController: ControllerBase
 
         return Ok(result.Data);
     }
+    
+    [HttpGet("{accountNo}/exists")]
+    public async Task<ActionResult<bool>> Exists(string accountNo)
+    {
+        bool exists = await _accountService.CheckExistenceByAccountNoAsync(accountNo);
+        return Ok(exists);
+    }
 }

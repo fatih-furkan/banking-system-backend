@@ -43,37 +43,40 @@ public class CardService
         return await _context.Cards.AnyAsync(card => card.CardToken == cardToken && card.CustomerId == customerId);
     }
 
-    public async Task<ServiceResult<CreateCardResponse>> AddCardAsync(CreateCardRequest createCardRequest)
+    //should only be called from the saga.
+    public async Task<ServiceResult<CreateCardResponse>> CreateCardAsync(CreateCardRequest request)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(createCardRequest.customerId);
+        bool customerExists = await _customerClient.CustomerExistsAsync(request.CustomerId);
         if (!customerExists)
         {
             return ServiceResult<CreateCardResponse>.Failure("Customer does not exist!");
         }
-
-        //todo transaction yapilmasi gerekebilir
         
-        string accountNo = await _accountClient.CreateAccount(createCardRequest.customerId, createCardRequest.branchCode);
+        bool accountExists = await _accountClient.AccountExistsAsync(request.AccountNo);
+        if (!accountExists)
+        {
+            return ServiceResult<CreateCardResponse>.Failure("Account does not exist!");
+        }
+        
         var (success, cardNo) = await GenerateCardNoAsync();
         if (!success)
         {
             throw new InvalidOperationException();
         }
-
-        string cardToken = GenerateCardToken(cardNo);
         
-        //todo accountun card bilgisi güncellenmeli
+        string cardToken = GenerateCardToken(cardNo);
 
         var card = new Card
         {
             CardToken = cardToken,
             CardNo = cardNo,
-            CardAccountNo = accountNo,
-            CustomerId = createCardRequest.customerId
+            CardAccountNo = request.AccountNo,
+            CustomerId = request.CustomerId
         };
         
         _context.Cards.Add(card);
         await _context.SaveChangesAsync();
+        
         CreateCardResponse response = new CreateCardResponse
         {
             CardAccountNo = card.CardAccountNo,
@@ -99,7 +102,7 @@ public class CardService
     private string GenerateCardToken(string cardNo)
     {
         
-        byte[] dataBytes = System.Text.Encoding.UTF8.GetBytes(cardNo);
+        byte[] dataBytes = Encoding.UTF8.GetBytes(cardNo);
         return Convert.ToBase64String(dataBytes);
     }
 
