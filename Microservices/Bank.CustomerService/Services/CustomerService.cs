@@ -97,4 +97,28 @@ public class CustomerService
     {
         return await _context.Customers.AnyAsync(customer => customer.CustomerId == customerId);
     }
+    
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, long customerId)
+    {
+        bool isOnlyDigits =
+            !string.IsNullOrEmpty(request.Status) &&
+            request.Status.All(c => c is >= '0' and <= '9');
+        
+        if (!isOnlyDigits)
+        {
+            return ServiceResult<Unit>.Failure("Status cannot contain letters.");
+        }
+        
+        var customer = await _context.Customers
+            .FirstOrDefaultAsync(customer => customer.CustomerId == customerId);
+        
+        if (customer == null)
+        {
+            return ServiceResult<Unit>.Failure("Account does not exist");
+        }
+        
+        customer.Status = request.Status;
+        await _context.SaveChangesAsync();
+        return ServiceResult<Unit>.Success(new Unit());
+    }
 }

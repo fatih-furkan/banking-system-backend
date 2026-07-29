@@ -4,6 +4,7 @@ using Bank.AccountService.Models.ClientModels;
 using Bank.Shared;
 using Bank.AccountService.Models.Dtos;
 using Bank.AccountService.Models.Entities;
+using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bank.AccountService.Services;
@@ -60,7 +61,6 @@ public class AccountService
             {
                 AccountNo = account.AccountNo,
                 BranchCode = account.BranchCode,
-                CardToken = account.CardToken,
                 CustomerId = account.CustomerId,
                 Status = account.Status
             };
@@ -83,25 +83,49 @@ public class AccountService
 
     public async Task<ServiceResult<DepositResponse>> DepositAsync(DepositRequest depositRequest)
     {
+
+        if (depositRequest.ChannelCode == ChannelCode.Pos)
+        {
+            return ServiceResult<DepositResponse>.Failure(
+                "Unauthorized channel.", 403);
+        }
+        if (decimal.Round(depositRequest.Amount, 2) != depositRequest.Amount)
+        {
+            return ServiceResult<DepositResponse>.Failure(
+                "The amount can have at most two decimal places.", 403);
+        }
+        
+        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE ACCOUNT
+             SET BALANCE = BALANCE + {depositRequest.Amount}
+             WHERE ACCOUNT_NO = {depositRequest.AccountNo}
+             """
+        );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<DepositResponse>.Failure("Account does not exist.");
+        }
+        
         var account = await _context.Accounts.FirstOrDefaultAsync
             (account => account.AccountNo == depositRequest.AccountNo);
 
         if (account != null)
         {
-            account.Balance += depositRequest.Amount;
-            await _context.SaveChangesAsync();
             var authRequest = new CreateAuthorizationRequest
             {
                 AccountNo = account.AccountNo,
-                Balance = account.Balance, //eskisi mi konmali yenisi mi??
+                Balance = account.Balance,
                 CardToken = null,
                 ChannelCode = depositRequest.ChannelCode,
                 CustomerId = account.CustomerId,
-                Otc = 10,
-                Ots = 10,
+                Otc = Constants.Otcs.Deposit,
+                Ots = depositRequest.ChannelCode == ChannelCode.Branch 
+                    ? Constants.Ots.DepositOts.BranchDeposit : Constants.Ots.DepositOts.AtmDeposit,
                 TransactionAmount = depositRequest.Amount,
-                TransactionDescription = "desc", //todo Disaridan mi alinmali burada mi belirlenmeli??
-                TransactionStatus = "1", //todo bu statuler tam neleri ifade ediyor??
+                TransactionDescription = "deposit",
+                TransactionStatus = "1"
             };
 
             var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
@@ -114,6 +138,138 @@ public class AccountService
             return ServiceResult<DepositResponse>.Success(response);
         }
         else return ServiceResult<DepositResponse>.Failure("Account does not exist.");
+    }
+    
+    public async Task<ServiceResult<WithdrawResponse>> CashWithdrawAsync(WithdrawRequest withdrawRequest)
+    {
+        
+        if (decimal.Round(withdrawRequest.Amount, 2) != withdrawRequest.Amount)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(
+                "The amount can have at most two decimal places.", 403);
+        }
+        
+        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE ACCOUNT
+             SET BALANCE = BALANCE - {withdrawRequest.Amount}
+             WHERE ACCOUNT_NO = {withdrawRequest.AccountNo} AND BALANCE >= {withdrawRequest.Amount}
+             """
+        );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<WithdrawResponse>.Failure("Account does not exist or has insufficient funds.");
+        }
+        
+        var account = await _context.Accounts.FirstOrDefaultAsync
+            (account => account.AccountNo == withdrawRequest.AccountNo);
+
+        if (account != null)
+        {
+            
+            var authRequest = new CreateAuthorizationRequest
+            {
+                AccountNo = account.AccountNo,
+                Balance = account.Balance,
+                CardToken = null,
+                ChannelCode = withdrawRequest.ChannelCode,
+                CustomerId = account.CustomerId,
+                Otc = Constants.Otcs.Withdrawal,
+                Ots = Constants.Ots.WithdrawalOts.CashWithdrawal,
+                TransactionAmount = withdrawRequest.Amount,
+                TransactionDescription = "withdrawal",
+                TransactionStatus = "1"
+            };
+
+            var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
+            WithdrawResponse response = new WithdrawResponse
+            {
+                TransactionAmount = authResponse.TransactionAmount,
+                Balance = authResponse.Balance,
+                TransactionTime = authResponse.TransactionDate
+            };
+            return ServiceResult<WithdrawResponse>.Success(response);
+        }
+        else return ServiceResult<WithdrawResponse>.Failure("Account does not exist.");
+    }
+    
+        public async Task<ServiceResult<WithdrawResponse>> FastWithdrawAsync(WithdrawRequest withdrawRequest)
+    {
+        
+        if (decimal.Round(withdrawRequest.Amount, 2) != withdrawRequest.Amount)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(
+                "The amount can have at most two decimal places.", 403);
+        }
+        
+        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE ACCOUNT
+             SET BALANCE = BALANCE - {withdrawRequest.Amount}
+             WHERE ACCOUNT_NO = {withdrawRequest.AccountNo} AND BALANCE >= {withdrawRequest.Amount}
+             """
+        );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<WithdrawResponse>.Failure("Account does not exist or has insufficient funds.");
+        }
+        
+        var account = await _context.Accounts.FirstOrDefaultAsync
+            (account => account.AccountNo == withdrawRequest.AccountNo);
+
+        if (account != null)
+        {
+            
+            var authRequest = new CreateAuthorizationRequest
+            {
+                AccountNo = account.AccountNo,
+                Balance = account.Balance,
+                CardToken = null,
+                ChannelCode = withdrawRequest.ChannelCode,
+                CustomerId = account.CustomerId,
+                Otc = Constants.Otcs.Withdrawal,
+                Ots = Constants.Ots.WithdrawalOts.FastWihtdrawal,
+                TransactionAmount = withdrawRequest.Amount,
+                TransactionDescription = "fast withdrawal",
+                TransactionStatus = "1"
+            };
+
+            var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
+            WithdrawResponse response = new WithdrawResponse
+            {
+                TransactionAmount = authResponse.TransactionAmount,
+                Balance = authResponse.Balance,
+                TransactionTime = authResponse.TransactionDate
+            };
+            return ServiceResult<WithdrawResponse>.Success(response);
+        }
+        else return ServiceResult<WithdrawResponse>.Failure("Account does not exist.");
+    }
+
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string accountNo)
+    {
+        bool isOnlyDigits =
+            !string.IsNullOrEmpty(request.Status) &&
+            request.Status.All(c => c is >= '0' and <= '9');
+        
+        if (!isOnlyDigits)
+        {
+            return ServiceResult<Unit>.Failure("Status cannot contain letters.");
+        }
+        
+        var account = await _context.Accounts
+            .FirstOrDefaultAsync(account => account.AccountNo == accountNo);
+        
+        if (account == null)
+        {
+            return ServiceResult<Unit>.Failure("Account does not exist");
+        }
+        
+        account.Status = request.Status;
+        await _context.SaveChangesAsync();
+        return ServiceResult<Unit>.Success(new Unit());
     }
     
     private async Task<long> GetNextAccountNoSequenceValueAsync()

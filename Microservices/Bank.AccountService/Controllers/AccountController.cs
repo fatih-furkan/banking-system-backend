@@ -1,9 +1,5 @@
-﻿using Bank.AccountService.Data;
-using Bank.AccountService.Models.Dtos;
-using Bank.AccountService.Services;
+﻿using Bank.AccountService.Models.Dtos;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ActionConstraints;
-using Microsoft.EntityFrameworkCore;
 
 namespace Bank.AccountService.Controllers;
 
@@ -70,6 +66,42 @@ public class AccountController: ControllerBase
     public async Task<IActionResult> Deposit(DepositRequest depositRequest)
     {
         var result = await _accountService.DepositAsync(depositRequest);
+        if (result.Data == null)
+        {
+            return StatusCode(result.StatusCode, result.ErrorMessage);
+        }
+
+        return Ok(result.Data);
+    }
+    
+    [HttpPost("cash-withdraw")]
+    public async Task<IActionResult> CashWithdraw(WithdrawRequest withdrawRequest)
+    {
+        var result = await _accountService.CashWithdrawAsync(withdrawRequest);
+        if (result.Data == null)
+        {
+            return StatusCode(result.StatusCode, result.ErrorMessage);
+        }
+
+        return Ok(result.Data);
+    }
+    
+    [HttpPost("fast-withdraw")]
+    public async Task<IActionResult> FastWithdraw(WithdrawRequest withdrawRequest)
+    {
+        var result = await _accountService.FastWithdrawAsync(withdrawRequest);
+        if (result.Data == null)
+        {
+            return StatusCode(result.StatusCode, result.ErrorMessage);
+        }
+
+        return Ok(result.Data);
+    }
+    
+    [HttpPost("{accountNo}/assign-status")]
+    public async Task<IActionResult> AssignStatus(AssignStatusRequest request, string accountNo)
+    {
+        var result = await _accountService.AssignStatusAsync(request, accountNo);
         if (result.Data == null)
         {
             return StatusCode(403, result.ErrorMessage);

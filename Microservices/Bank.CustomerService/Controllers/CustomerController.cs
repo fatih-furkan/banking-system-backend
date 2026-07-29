@@ -68,4 +68,16 @@ public class CustomerController: ControllerBase
         bool exists = await _customerService.CheckExistenceByCustomerIdAsync(customerId);
         return Ok(exists);
     }
+    
+    [HttpPost("{customerId:long}/assign-status")]
+    public async Task<IActionResult> AssignStatus(AssignStatusRequest request, long customerId)
+    {
+        var result = await _customerService.AssignStatusAsync(request, customerId);
+        if (result.Data == null)
+        {
+            return StatusCode(403, result.ErrorMessage);
+        }
+
+        return Ok(result.Data);
+    }
 }

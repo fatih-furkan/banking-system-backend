@@ -24,9 +24,6 @@ public class AppDbContext: DbContext
                 entity.Property(e => e.AccountNo)
                     .HasColumnName("ACCOUNT_NO")
                     .HasMaxLength(8);
-                entity.Property(e => e.CardToken)
-                    .HasColumnName("CARD_TOKEN")
-                    .HasMaxLength(100);
                 entity.Property(e => e.CustomerId)
                     .HasColumnName("CUSTOMER_ID");
                 entity.Property(e => e.BranchCode)
