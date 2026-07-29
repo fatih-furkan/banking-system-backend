@@ -1,6 +1,6 @@
-﻿namespace Bank.LimitService.Models.Dtos;
+﻿namespace Bank.AccountService.Models.Dtos.Limit;
 
-public class SpendLimitResponse
+public class UseChargeLimitResponse
 {
     public long CustomerId { get; set; }
     public decimal? TransactionAmount { get; set; }

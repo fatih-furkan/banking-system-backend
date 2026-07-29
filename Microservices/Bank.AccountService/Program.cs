@@ -1,5 +1,6 @@
 using Bank.AccountService.Clients;
 using Bank.AccountService.Data;
+using Bank.AccountService.Sagas;
 using Bank.AccountService.Services;
 using Bank.Shared;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +28,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<ChargeLimitSaga>();
+builder.Services.AddScoped<LimitService>();
 
 builder.Services.AddHttpClient<CustomerClient>(client =>
 {

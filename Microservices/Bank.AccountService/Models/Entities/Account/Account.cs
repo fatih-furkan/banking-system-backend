@@ -1,4 +1,4 @@
-﻿namespace Bank.AccountService.Models.Entities;
+﻿namespace Bank.AccountService.Models.Entities.Account;
 
 public class Account
 {

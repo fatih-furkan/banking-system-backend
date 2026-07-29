@@ -178,4 +178,14 @@ public static class Errors
         new(
             ErrorCode.InsufficientLimitErr,
             Constants.ExceptionMessages.InsufficientLimitError);
+    
+    public static readonly Error AuthCantCreatedError =
+        new(
+            ErrorCode.AuthCantCreatedErr,
+            Constants.ExceptionMessages.AuthCantCreatedError);
+
+    public static readonly Error UseChargeLimitError =
+        new(
+            ErrorCode.UseChargeLimitErr,
+            Constants.ExceptionMessages.UseChargeLimitError);
 }

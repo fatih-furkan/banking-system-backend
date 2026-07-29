@@ -98,10 +98,22 @@ public class LimitController: Controller
         else return Ok();
     }
     
-    [HttpPost("spend")]
-    public async Task<IActionResult> Spend(SpendLimitRequest spendLimitRequest)
+    [HttpPost("use-charge-limit")]
+    public async Task<IActionResult> UseChargeLimit(UseChargeLimitRequest useChargeLimitRequest)
     {
-        var result = await _limitService.SpendLimitAsync(spendLimitRequest);
+        var result = await _limitService.UseChargeLimitAsync(useChargeLimitRequest);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(result.StatusCode, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
+    
+    [HttpPost("compensate-use-charge-limit")]
+    public async Task<IActionResult> CompensateUseChargeLimit(UseChargeLimitRequest useChargeLimitRequest)
+    {
+        var result = await _limitService.CompensateUseChargeLimitAsync(useChargeLimitRequest);
         if (!result.IsSuccess)
         {
             return StatusCode(result.StatusCode, new ErrorResponse(result.Error));

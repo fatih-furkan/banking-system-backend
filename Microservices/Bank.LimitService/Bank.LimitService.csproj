@@ -15,4 +15,10 @@
     <ProjectReference Include="..\Shared\Bank.Shared\Bank.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Models\Dtos\" />
+    <Folder Include="Models\Entities\" />
+    <Folder Include="Services\" />
+  </ItemGroup>
+
 </Project>

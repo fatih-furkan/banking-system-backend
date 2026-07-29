@@ -1,8 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bank.Shared;
 using Bank.Shared.Constants;
 
-namespace Bank.AccountService.Models.Dtos;
+namespace Bank.AccountService.Models.Dtos.Account;
 
 public class CreateAccountRequest
 {

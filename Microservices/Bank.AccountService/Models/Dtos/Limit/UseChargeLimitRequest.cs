@@ -1,13 +1,16 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bank.Shared.Enums;
 
-namespace Bank.AccountService.Models.Dtos;
+namespace Bank.AccountService.Models.Dtos.Limit;
 
-public class DepositRequest
+public class UseChargeLimitRequest
 {
     [Required]
     public decimal? Amount { get; set; }
-    public string AccountNo { get; set; } = null!;
+    
+    [Required]
+    public long? CustomerId { get; set; }
+    
     [Required]
     public ChannelCode? ChannelCode { get; set; }
 }

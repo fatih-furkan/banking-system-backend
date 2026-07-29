@@ -66,6 +66,9 @@ public class Constants
         public const string CardNotExistError = "Card does not exist.";
         public const string CustomerNotExistError = "The customer does not exist.";
         public const string LimitNotFoundError = "Limit could not be found.";
-        public const string InsufficientLimitError = "Customer does not exist or has insufficient funds.";
+        public const string InsufficientLimitError = "Customer does not exist or has insufficient limit.";
+        public const string AuthCantCreatedError = "Authorization entry could not be created.";
+        public const string UseChargeLimitError = "Limits could not be used.";
+        public const string ChargeLimitCompensationError = "Charge limit compensation is failed.";
     }
 }

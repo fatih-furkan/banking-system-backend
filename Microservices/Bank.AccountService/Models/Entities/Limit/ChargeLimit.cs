@@ -1,4 +1,4 @@
-﻿namespace Bank.LimitService.Models.Entities;
+﻿namespace Bank.AccountService.Models.Entities.Limit;
 
 public class ChargeLimit
 {

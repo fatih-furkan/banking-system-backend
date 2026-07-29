@@ -1,15 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bank.Shared.Enums;
 
-namespace Bank.LimitService.Models.Dtos;
+namespace Bank.AccountService.Models.Dtos.Account;
 
-public class SpendLimitRequest
+public class WithdrawRequest
 {
     [Required]
     public decimal? Amount { get; set; }
-    
-    [Required]
-    public long? CustomerId { get; set; }
+    public string AccountNo { get; set; } = null!;
     
     [Required]
     public ChannelCode? ChannelCode { get; set; }

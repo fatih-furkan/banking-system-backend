@@ -1,12 +1,12 @@
-﻿using Bank.LimitService.Clients;
-using Bank.LimitService.Data;
-using Bank.LimitService.Models.Dtos;
-using Bank.LimitService.Models.Entities;
+﻿using Bank.AccountService.Clients;
+using Bank.AccountService.Data;
+using Bank.AccountService.Models.Dtos.Limit;
+using Bank.AccountService.Models.Entities.Limit;
 using Bank.Shared;
 using Bank.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 
-namespace Bank.LimitService.Services;
+namespace Bank.AccountService.Services;
 
 public class LimitService
 {
@@ -133,18 +133,18 @@ public class LimitService
         return false;
     }
     
-    public async Task<ServiceResult<SpendLimitResponse>> SpendLimitAsync(SpendLimitRequest spendLimitRequest)
+    public async Task<ServiceResult<UseChargeLimitResponse>> UseChargeLimitAsync(UseChargeLimitRequest useChargeLimitRequest)
     {
         
-        if (decimal.Round(spendLimitRequest.Amount.Value, 2) != spendLimitRequest.Amount)
+        if (decimal.Round(useChargeLimitRequest.Amount.Value, 2) != useChargeLimitRequest.Amount)
         {
-            return ServiceResult<SpendLimitResponse>.Failure(
+            return ServiceResult<UseChargeLimitResponse>.Failure(
                 Errors.PrecisionError, 403);
         }
 
-        if (spendLimitRequest.Amount < 0)
+        if (useChargeLimitRequest.Amount < 0)
         {
-            return ServiceResult<SpendLimitResponse>.Failure(
+            return ServiceResult<UseChargeLimitResponse>.Failure(
                 Errors.NegativeAmountError, 403);
         }
         
@@ -152,7 +152,7 @@ public class LimitService
             from current in _context.CurrentChargeLimits
             join configured in _context.ChargeLimits
                 on current.CustomerId equals configured.CustomerId
-            where current.CustomerId == spendLimitRequest.CustomerId
+            where current.CustomerId == useChargeLimitRequest.CustomerId
             select new
             {
                 Current = current,
@@ -162,7 +162,7 @@ public class LimitService
         
         if (limits?.Current is null || limits.Configured is null)
         {
-            return ServiceResult<SpendLimitResponse>.Failure(
+            return ServiceResult<UseChargeLimitResponse>.Failure(
                 Errors.LimitNotFoundError
             );
         }
@@ -193,41 +193,93 @@ public class LimitService
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
             $"""
              UPDATE CURRENT_CHARGE_LIMITS
-             SET DAILY_LIMIT = DAILY_LIMIT - {spendLimitRequest.Amount}, 
-                 MONTHLY_LIMIT = MONTHLY_LIMIT - {spendLimitRequest.Amount},
-                 ANNUAL_LIMIT = ANNUAL_LIMIT - {spendLimitRequest.Amount}
-             WHERE CUSTOMER_ID = {spendLimitRequest.CustomerId} 
-               AND DAILY_LIMIT >= {spendLimitRequest.Amount}
-               AND MONTHLY_LIMIT >= {spendLimitRequest.Amount}
-               AND ANNUAL_LIMIT >= {spendLimitRequest.Amount}
+             SET DAILY_LIMIT = DAILY_LIMIT - {useChargeLimitRequest.Amount}, 
+                 MONTHLY_LIMIT = MONTHLY_LIMIT - {useChargeLimitRequest.Amount},
+                 ANNUAL_LIMIT = ANNUAL_LIMIT - {useChargeLimitRequest.Amount}
+             WHERE CUSTOMER_ID = {useChargeLimitRequest.CustomerId} 
+               AND DAILY_LIMIT >= {useChargeLimitRequest.Amount}
+               AND MONTHLY_LIMIT >= {useChargeLimitRequest.Amount}
+               AND ANNUAL_LIMIT >= {useChargeLimitRequest.Amount}
              """
         );
 
         if (affectedRows == 0)
         {
-            return ServiceResult<SpendLimitResponse>.Failure(Errors.InsufficientLimitError);
+            return ServiceResult<UseChargeLimitResponse>.Failure(Errors.InsufficientLimitError);
         }
         
         var limit = await _context.CurrentChargeLimits
             .AsNoTracking()
             .FirstOrDefaultAsync
-            (limit => limit.CustomerId == spendLimitRequest.CustomerId);
+            (limit => limit.CustomerId == useChargeLimitRequest.CustomerId);
 
         if (limit != null)
         {
-            var response = new SpendLimitResponse
+            var response = new UseChargeLimitResponse
             {
                 CustomerId = limit.CustomerId,
                 NewDailyLimit = limit.DailyLimit,
                 NewMonthlyLimit = limit.MonthlyLimit,
                 NewAnnualLimit = limit.AnnualLimit,
-                TransactionAmount = spendLimitRequest.Amount,
+                TransactionAmount = useChargeLimitRequest.Amount,
                 TransactionTime = DateTime.UtcNow
             };
             
-            return ServiceResult<SpendLimitResponse>.Success(response);
+            return ServiceResult<UseChargeLimitResponse>.Success(response);
         }
         
-        else return ServiceResult<SpendLimitResponse>.Failure(Errors.AccountNotFoundError);
+        else return ServiceResult<UseChargeLimitResponse>.Failure(Errors.AccountNotFoundError);
+    }
+    
+    public async Task<ServiceResult<CompensateUseChargeLimitResponse>> CompensateUseChargeLimitAsync(UseChargeLimitRequest useChargeLimitRequest)
+    {
+        
+        if (decimal.Round(useChargeLimitRequest.Amount.Value, 2) != useChargeLimitRequest.Amount)
+        {
+            return ServiceResult<CompensateUseChargeLimitResponse>.Failure(
+                Errors.PrecisionError, 403);
+        }
+
+        if (useChargeLimitRequest.Amount < 0)
+        {
+            return ServiceResult<CompensateUseChargeLimitResponse>.Failure(
+                Errors.NegativeAmountError, 403);
+        }
+
+        await _context.SaveChangesAsync();
+        
+        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
+            $"""
+             UPDATE CURRENT_CHARGE_LIMITS
+             SET DAILY_LIMIT = DAILY_LIMIT + {useChargeLimitRequest.Amount}, 
+                 MONTHLY_LIMIT = MONTHLY_LIMIT + {useChargeLimitRequest.Amount},
+                 ANNUAL_LIMIT = ANNUAL_LIMIT + {useChargeLimitRequest.Amount}
+             WHERE CUSTOMER_ID = {useChargeLimitRequest.CustomerId} 
+             """
+        );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<CompensateUseChargeLimitResponse>.Failure(Errors.CustomerNotExistError);
+        }
+        
+        var limit = await _context.CurrentChargeLimits
+            .AsNoTracking()
+            .FirstOrDefaultAsync
+            (limit => limit.CustomerId == useChargeLimitRequest.CustomerId);
+
+        if (limit != null)
+        {
+            var response = new CompensateUseChargeLimitResponse
+            {
+                CustomerId = limit.CustomerId,
+                TransactionAmount = useChargeLimitRequest.Amount,
+                TransactionTime = DateTime.UtcNow
+            };
+            
+            return ServiceResult<CompensateUseChargeLimitResponse>.Success(response);
+        }
+        
+        else return ServiceResult<CompensateUseChargeLimitResponse>.Failure(Errors.AccountNotFoundError);
     }
 }

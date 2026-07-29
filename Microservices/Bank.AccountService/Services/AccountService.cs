@@ -2,8 +2,10 @@
 using Bank.AccountService.Data;
 using Bank.AccountService.Models.ClientModels;
 using Bank.Shared;
-using Bank.AccountService.Models.Dtos;
-using Bank.AccountService.Models.Entities;
+using Bank.AccountService.Models.Dtos.Account;
+using Bank.AccountService.Models.Dtos.Limit;
+using Bank.AccountService.Models.Entities.Account;
+using Bank.AccountService.Sagas;
 using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
@@ -15,14 +17,20 @@ public class AccountService
     private readonly AppDbContext _context;
     private readonly CustomerClient _customerClient;
     private readonly AuthorizationClient _authorizationClient;
-
+    private readonly ChargeLimitSaga _chargeLimitSaga;
+    private readonly ILogger<AccountService> _logger;
+    
     public AccountService(AppDbContext context, 
         CustomerClient customerClient,
-        AuthorizationClient authorizationClient)
+        AuthorizationClient authorizationClient,
+        ChargeLimitSaga chargeLimitSaga,
+        ILogger<AccountService> logger)
     {
         _context = context;
         _customerClient = customerClient;
         _authorizationClient = authorizationClient;
+        _chargeLimitSaga = chargeLimitSaga;
+        _logger = logger;
     }
      
     public async Task<List<Account>> GetAllAccountsAsync()
@@ -38,7 +46,7 @@ public class AccountService
     public async Task<ServiceResult<CreateAccountResponse?>> AddAccountAsync(
         CreateAccountRequest createAccountRequest)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(createAccountRequest.CustomerId.Value);
+        bool customerExists = await _customerClient.CustomerExistsAsync(createAccountRequest.CustomerId!.Value);
         
         if(!customerExists)
         {
@@ -90,7 +98,7 @@ public class AccountService
             return ServiceResult<DepositResponse>.Failure(
                 Errors.UnauthorizedChannelError, 403);
         }
-        if (decimal.Round(depositRequest.Amount.Value, 2) != depositRequest.Amount)
+        if (decimal.Round(depositRequest.Amount!.Value, 2) != depositRequest.Amount)
         {
             return ServiceResult<DepositResponse>.Failure(
                 Errors.PrecisionError, 403);
@@ -100,6 +108,29 @@ public class AccountService
         {
             return ServiceResult<DepositResponse>.Failure(
                 Errors.NegativeAmountError, 403);
+        }
+        
+        var account = await _context.Accounts.FirstOrDefaultAsync
+            (account => account.AccountNo == depositRequest.AccountNo);
+
+        UseChargeLimitRequest useChargeLimitRequest;
+        
+        if (account != null)
+        {
+            useChargeLimitRequest = new UseChargeLimitRequest
+            {
+                Amount = depositRequest.Amount,
+                ChannelCode = depositRequest.ChannelCode,
+                CustomerId = account.CustomerId
+            };
+        }
+        else return ServiceResult<DepositResponse>.Failure(Errors.AccountNotFoundError);
+
+        
+        var chargeLimitSagaResult = await _chargeLimitSaga.ExecuteAsync(useChargeLimitRequest);
+        if (!chargeLimitSagaResult.IsSuccess)
+        {
+            return ServiceResult<DepositResponse>.Failure(Errors.InsufficientLimitError);
         }
         
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -114,27 +145,47 @@ public class AccountService
         {
             return ServiceResult<DepositResponse>.Failure(Errors.AccountNotFoundError);
         }
-        
-        var account = await _context.Accounts.FirstOrDefaultAsync
-            (account => account.AccountNo == depositRequest.AccountNo);
 
-        if (account != null)
+        try
         {
-            var authRequest = new CreateAuthorizationRequest
-            {
-                AccountNo = account.AccountNo,
-                Balance = account.Balance,
-                CardToken = null,
-                ChannelCode = depositRequest.ChannelCode.Value,
-                CustomerId = account.CustomerId,
-                Otc = Constants.Otcs.Deposit,
-                Ots = depositRequest.ChannelCode == ChannelCode.Branch 
-                    ? Constants.Ots.DepositOts.BranchDeposit : Constants.Ots.DepositOts.AtmDeposit,
-                TransactionAmount = depositRequest.Amount,
-                TransactionDescription = "deposit",
-                TransactionStatus = "1"
-            };
+            await _context.Entry(account)
+                .ReloadAsync();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Failed to reload account {AccountNo}.",
+                account.AccountNo
+            );
 
+            throw;
+        }
+
+        if (_context.Entry(account).State == EntityState.Detached)
+        {
+            return ServiceResult<DepositResponse>.Failure(
+                Errors.AccountNotFoundError
+            );
+        }
+        
+        var authRequest = new CreateAuthorizationRequest
+        {
+            AccountNo = account.AccountNo,
+            Balance = account.Balance,
+            CardToken = null,
+            ChannelCode = depositRequest.ChannelCode!.Value,
+            CustomerId = account.CustomerId,
+            Otc = Constants.Otcs.Deposit,
+            Ots = depositRequest.ChannelCode == ChannelCode.Branch 
+                ? Constants.Ots.DepositOts.BranchDeposit : Constants.Ots.DepositOts.AtmDeposit,
+            TransactionAmount = depositRequest.Amount,
+            TransactionDescription = "deposit",
+            TransactionStatus = "1"
+        };
+        
+        try
+        {
             var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
             
             DepositResponse response = new DepositResponse
@@ -145,13 +196,16 @@ public class AccountService
             };
             return ServiceResult<DepositResponse>.Success(response);
         }
-        else return ServiceResult<DepositResponse>.Failure(Errors.AccountNotFoundError);
+        catch
+        {
+            return ServiceResult<DepositResponse>.Failure(Errors.AuthCantCreatedError);
+        }
     }
     
     public async Task<ServiceResult<WithdrawResponse>> CashWithdrawAsync(WithdrawRequest withdrawRequest)
     {
         
-        if (decimal.Round(withdrawRequest.Amount.Value, 2) != withdrawRequest.Amount)
+        if (decimal.Round(withdrawRequest.Amount!.Value, 2) != withdrawRequest.Amount)
         {
             return ServiceResult<WithdrawResponse>.Failure(
                 Errors.PrecisionError, 403);
@@ -211,7 +265,7 @@ public class AccountService
         public async Task<ServiceResult<WithdrawResponse>> FastWithdrawAsync(WithdrawRequest withdrawRequest)
     {
         
-        if (decimal.Round(withdrawRequest.Amount.Value, 2) != withdrawRequest.Amount)
+        if (decimal.Round(withdrawRequest.Amount!.Value, 2) != withdrawRequest.Amount)
         {
             return ServiceResult<WithdrawResponse>.Failure(
                 Errors.PrecisionError, 403);
@@ -307,4 +361,5 @@ public class AccountService
     {
         return await _context.Accounts.AnyAsync(account => account.AccountNo == accountNo);
     }
+    
 }

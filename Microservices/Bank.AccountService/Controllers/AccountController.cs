@@ -1,4 +1,5 @@
 ﻿using Bank.AccountService.Models.Dtos;
+using Bank.AccountService.Models.Dtos.Account;
 using Bank.Shared;
 using Bank.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;

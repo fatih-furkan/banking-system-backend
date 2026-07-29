@@ -1,4 +1,4 @@
-﻿namespace Bank.LimitService.Models.Dtos;
+﻿namespace Bank.AccountService.Models.Dtos.Limit;
 
 public class CreateChargeLimitResponse
 {

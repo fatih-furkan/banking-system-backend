@@ -23,10 +23,6 @@ public class AuthorizationClient
         
         var responseBody = await response.Content.ReadAsStringAsync();
         
-        
-        Console.WriteLine(responseBody + "\n\n");
-        
-        
         response.EnsureSuccessStatusCode();
 
         var authorization =

@@ -36,5 +36,7 @@ public enum ErrorCode
     CardNotExistErr,
     CustomerNotExistErr,
     LimitNotFoundErr,
-    InsufficientLimitErr
+    InsufficientLimitErr,
+    AuthCantCreatedErr,
+    UseChargeLimitErr
 }

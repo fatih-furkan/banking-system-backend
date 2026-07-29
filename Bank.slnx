@@ -4,7 +4,6 @@
     <Project Path="Microservices/Bank.AuthorizationService/Bank.AuthorizationService.csproj" />
     <Project Path="Microservices/Bank.CardService/Bank.CardService.csproj" />
     <Project Path="Microservices/Bank.CustomerService/Bank.CustomerService.csproj" />
-    <Project Path="Microservices/Bank.LimitService/Bank.LimitService.csproj" />
   </Folder>
   <Folder Name="/Microservices/Shared/">
     <Project Path="Microservices/Shared/Bank.Shared/Bank.Shared.csproj" />

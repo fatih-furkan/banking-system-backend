@@ -1,4 +1,4 @@
-﻿namespace Bank.AccountService.Models.Dtos;
+﻿namespace Bank.AccountService.Models.Dtos.Account;
 
 public class WithdrawResponse
 {
