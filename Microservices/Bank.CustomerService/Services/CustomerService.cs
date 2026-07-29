@@ -61,7 +61,7 @@ public class CustomerService
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
-            var createChargeLimitResult = await _accountClient.AddChargeLimitAsync(
+            var createChargeLimitResult = await _accountClient.CreateChargeLimitAsync(
                 new CreateChargeLimitRequest
                 {
                     AnnualLimit = 1000000, //todo bu degerler nereye konmali

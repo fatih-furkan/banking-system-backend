@@ -4,6 +4,7 @@ using Bank.AuthorizationService.Models;
 using Bank.AuthorizationService.Models.Dtos;
 using Bank.AuthorizationService.Models.Dtos.ClientDtos;
 using Bank.AuthorizationService.Models.Entities;
+using Bank.AuthorizationService.Sagas;
 using Bank.Shared;
 using Bank.Shared.Constants;
 using Bank.Shared.Enums;
@@ -16,14 +17,17 @@ public class AuthorizationService
     private readonly AppDbContext _context;
     private readonly CardClient _cardClient;
     private readonly AccountClient _accountClient;
+    private readonly SpendingLimitSaga _spendingLimitSaga;
     
     public AuthorizationService(AppDbContext context, 
         CardClient cardClient,
-        AccountClient accountClient)
+        AccountClient accountClient,
+        SpendingLimitSaga spendingLimitSaga)
     {
         _context = context;
         _cardClient = cardClient;
         _accountClient = accountClient;
+        _spendingLimitSaga = spendingLimitSaga;
     }
     
     public async Task<List<Authorization>> GetAllAuthorizationsAsync()
@@ -118,6 +122,7 @@ public class AuthorizationService
             return ServiceResult<SaleResponse>.Failure(
                 Errors.UnauthorizedChannelError, 403);
         }
+        
         var accountNoResult = await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
         if (!accountNoResult.IsSuccess || accountNoResult.Data == null)
         {
@@ -126,7 +131,39 @@ public class AuthorizationService
         }
 
         string accountNo = accountNoResult.Data;
+        
+        var customerIdResult = await _accountClient.GetCustomerIdAsync(accountNo);
+        if (!customerIdResult.IsSuccess || customerIdResult.Data == null)
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                Errors.AccountNotFoundError, 403);
+        }
 
+        long customerId = customerIdResult.Data.Value;
+        
+        var limitRequest = new UseSpendingLimitRequest
+        {
+            Amount = request.Amount,
+            ChannelCode = request.ChannelCode.Value,
+            CustomerId = customerId
+        };
+        
+        
+        // use limit
+        
+        var limitResult = await _spendingLimitSaga.ExecuteAsync(
+            limitRequest
+        );
+
+        if (!limitResult.IsSuccess)
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                limitResult.Error ?? Errors.InsufficientLimitError,
+                limitResult.StatusCode
+            );
+        }
+
+        //finalize the process
         
         var accountSaleResult = await _accountClient.AccountSaleAsync(new AccountSaleRequest
         {
@@ -142,6 +179,8 @@ public class AuthorizationService
             return ServiceResult<SaleResponse>.Failure(
                 Errors.AccountSaleError, 403);
         }
+        
+        //create database entry
         
         var authRequest = new CreateAuthorizationRequest
         {

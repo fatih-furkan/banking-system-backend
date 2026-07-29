@@ -1,5 +1,6 @@
 using Bank.AuthorizationService.Clients;
 using Bank.AuthorizationService.Data;
+using Bank.AuthorizationService.Sagas;
 using Bank.AuthorizationService.Services;
 using Bank.Shared;
 using Bank.Shared.Constants;
@@ -62,6 +63,7 @@ builder.Services.AddHttpClient<AccountClient>(client =>
 
 builder.Services.AddScoped<AuthorizationService>();
 builder.Services.AddScoped<SpendingLimitService>();
+builder.Services.AddScoped<SpendingLimitSaga>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

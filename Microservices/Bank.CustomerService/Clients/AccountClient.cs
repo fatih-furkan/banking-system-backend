@@ -16,7 +16,7 @@ public class AccountClient
     }
 
     public async Task<ServiceResult<CreateChargeLimitResponse>>
-        AddChargeLimitAsync(
+        CreateChargeLimitAsync(
             CreateChargeLimitRequest request,
             CancellationToken cancellationToken = default)
     {

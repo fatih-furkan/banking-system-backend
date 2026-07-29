@@ -7,10 +7,12 @@ namespace Bank.AuthorizationService.Clients;
 public class AccountClient
 {
     private readonly HttpClient _httpClient;
+    private readonly ILogger<AccountClient> _logger;
 
-    public AccountClient(HttpClient httpClient)
+    public AccountClient(HttpClient httpClient, ILogger<AccountClient> logger)
     {
         _httpClient = httpClient;
+        _logger = logger;
     }
     
     public async Task<ServiceResult<AccountSaleResponse>> AccountSaleAsync(AccountSaleRequest request)
@@ -26,6 +28,7 @@ public class AccountClient
             string errorBody =
                 await response.Content.ReadAsStringAsync();
 
+            _logger.LogError(errorBody);
             return ServiceResult<AccountSaleResponse>.Failure(
                 Errors.AccountSaleError
             );
@@ -43,5 +46,36 @@ public class AccountClient
         }
 
         return ServiceResult<AccountSaleResponse>.Success(result);
+    }
+    
+    public async Task<ServiceResult<long?>> GetCustomerIdAsync(string accountNo)
+    {
+        
+        using var response =  await _httpClient.GetAsync(
+            $"/api/account/{accountNo}"
+        );
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            string errorBody =
+                await response.Content.ReadAsStringAsync();
+
+            return ServiceResult<long?>.Failure(
+                Errors.GetAccountError
+            );
+        }
+
+        GetByAccountNoResponse? result =
+            await response.Content.ReadFromJsonAsync<GetByAccountNoResponse>(
+            );
+
+        if (result is null)
+        {
+            throw new GeneralException(
+                Errors.UnexpectedError
+            );
+        }
+
+        return ServiceResult<long?>.Success(result.CustomerId);
     }
 }

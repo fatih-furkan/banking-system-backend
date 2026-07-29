@@ -52,6 +52,17 @@ public class SpendingLimitService
         }
         else
         {
+            
+            SpendingLimit? chargeLimit = 
+                await _context.SpendingLimits.FindAsync(createSpendingLimitRequest.CustomerId);
+            
+            //if limits already exist for this customer
+            if ( chargeLimit != null)
+            {
+                return ServiceResult<CreateSpendingLimitResponse?>
+                    .Failure(Errors.LimitAlreadyExistsError);
+            }
+            
             var time = DateTime.UtcNow;
             
             var limit = new SpendingLimit

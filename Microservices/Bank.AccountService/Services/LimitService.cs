@@ -51,6 +51,16 @@ public class LimitService
         }
         else
         {
+            ChargeLimit? chargeLimit = 
+                await _context.ChargeLimits.FindAsync(createChargeLimitRequest.CustomerId);
+            
+            //if limits already exist for this customer
+            if ( chargeLimit != null)
+            {
+                return ServiceResult<CreateChargeLimitResponse?>
+                    .Failure(Errors.LimitAlreadyExistsError);
+            }
+            
             var limit = new ChargeLimit
             {
                 CustomerId = createChargeLimitRequest.CustomerId.Value,

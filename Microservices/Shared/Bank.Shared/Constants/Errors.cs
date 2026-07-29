@@ -224,4 +224,9 @@ public static class Errors
         new(
             ErrorCode.AccountSaleErr,
             Constants.ExceptionMessages.AccountSaleError);
+    
+    public static readonly Error LimitAlreadyExistsError =
+        new(
+            ErrorCode.LimitAlreadyExistsErr,
+            Constants.ExceptionMessages.LimitAlreadyExistsError);
 }
