@@ -1,5 +1,6 @@
 ﻿using Bank.AuthorizationService.Models;
 using Bank.Shared;
+using Bank.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.AuthorizationService.Controllers;
@@ -25,7 +26,7 @@ public class AuthorizationController: ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, Constants.ExceptionMessages.AuthorizationGetError);
+            return StatusCode(500, new ErrorResponse(Errors.AuthorizationGetError));
         }
     }
 
@@ -35,7 +36,7 @@ public class AuthorizationController: ControllerBase
         var result = await _authorizationService.CreateAuthorizationAsync(request);
         if (result.Data == null)
         {
-            return StatusCode(403, result.ErrorMessage);
+            return StatusCode(403, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);

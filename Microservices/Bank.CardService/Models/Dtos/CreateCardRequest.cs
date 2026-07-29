@@ -1,5 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Bank.Shared;
+using Bank.Shared.Constants;
 
 namespace Bank.CardService.Models.Dtos;
 

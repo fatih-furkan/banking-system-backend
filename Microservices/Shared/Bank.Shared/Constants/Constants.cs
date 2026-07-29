@@ -1,4 +1,4 @@
-﻿namespace Bank.Shared;
+﻿namespace Bank.Shared.Constants;
 
 public class Constants
 {
@@ -63,5 +63,9 @@ public class Constants
         public const string GetCustomerError = "Customer could not be found.";
         public const string TcError = "The tc is wrong.";
         public const string TcAssignedError = "The tc is already assigned to another user.";
+        public const string UnexpectedError = "Unexpected error.";
+        public const string GetCardError = "Error while getting the cards";
+        public const string CardNotExistError = "Card does not exist.";
+        public const string CustomerNotExistError = "Customer does not exist.";
     }
 }

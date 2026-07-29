@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection.Metadata;
 using Bank.Shared;
+using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 
 namespace Bank.AuthorizationService.Models;

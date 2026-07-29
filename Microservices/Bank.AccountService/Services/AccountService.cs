@@ -4,6 +4,7 @@ using Bank.AccountService.Models.ClientModels;
 using Bank.Shared;
 using Bank.AccountService.Models.Dtos;
 using Bank.AccountService.Models.Entities;
+using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 
@@ -42,7 +43,7 @@ public class AccountService
         if(!customerExists)
         {
             return ServiceResult<CreateAccountResponse?>
-                .Failure(Constants.ExceptionMessages.UserNotExistError);
+                .Failure(Errors.UserNotExistError);
         }
         else
         {
@@ -87,18 +88,18 @@ public class AccountService
         if (depositRequest.ChannelCode == ChannelCode.Pos)
         {
             return ServiceResult<DepositResponse>.Failure(
-                Constants.ExceptionMessages.UnauthorizedChannel, 403);
+                Errors.UnauthorizedChannelError, 403);
         }
         if (decimal.Round(depositRequest.Amount.Value, 2) != depositRequest.Amount)
         {
             return ServiceResult<DepositResponse>.Failure(
-                Constants.ExceptionMessages.PrecisionError, 403);
+                Errors.PrecisionError, 403);
         }
 
         if (depositRequest.Amount < 0)
         {
             return ServiceResult<DepositResponse>.Failure(
-                Constants.ExceptionMessages.NegativeAmountError, 403);
+                Errors.NegativeAmountError, 403);
         }
         
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -111,7 +112,7 @@ public class AccountService
 
         if (affectedRows == 0)
         {
-            return ServiceResult<DepositResponse>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
+            return ServiceResult<DepositResponse>.Failure(Errors.AccountNotFoundError);
         }
         
         var account = await _context.Accounts.FirstOrDefaultAsync
@@ -143,7 +144,7 @@ public class AccountService
             };
             return ServiceResult<DepositResponse>.Success(response);
         }
-        else return ServiceResult<DepositResponse>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
+        else return ServiceResult<DepositResponse>.Failure(Errors.AccountNotFoundError);
     }
     
     public async Task<ServiceResult<WithdrawResponse>> CashWithdrawAsync(WithdrawRequest withdrawRequest)
@@ -152,13 +153,13 @@ public class AccountService
         if (decimal.Round(withdrawRequest.Amount.Value, 2) != withdrawRequest.Amount)
         {
             return ServiceResult<WithdrawResponse>.Failure(
-                Constants.ExceptionMessages.PrecisionError, 403);
+                Errors.PrecisionError, 403);
         }
         
         if (withdrawRequest.Amount < 0)
         {
             return ServiceResult<WithdrawResponse>.Failure(
-                Constants.ExceptionMessages.NegativeAmountError, 403);
+                Errors.NegativeAmountError, 403);
         }
         
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -171,7 +172,7 @@ public class AccountService
 
         if (affectedRows == 0)
         {
-            return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.InsufficientFundsError);
+            return ServiceResult<WithdrawResponse>.Failure(Errors.InsufficientFundsError);
         }
         
         var account = await _context.Accounts.FirstOrDefaultAsync
@@ -203,7 +204,7 @@ public class AccountService
             };
             return ServiceResult<WithdrawResponse>.Success(response);
         }
-        else return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
+        else return ServiceResult<WithdrawResponse>.Failure(Errors.AccountNotFoundError);
     }
     
         public async Task<ServiceResult<WithdrawResponse>> FastWithdrawAsync(WithdrawRequest withdrawRequest)
@@ -212,7 +213,7 @@ public class AccountService
         if (decimal.Round(withdrawRequest.Amount.Value, 2) != withdrawRequest.Amount)
         {
             return ServiceResult<WithdrawResponse>.Failure(
-                Constants.ExceptionMessages.PrecisionError, 403);
+                Errors.PrecisionError, 403);
         }
         
         int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
@@ -225,7 +226,7 @@ public class AccountService
 
         if (affectedRows == 0)
         {
-            return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.InsufficientFundsError);
+            return ServiceResult<WithdrawResponse>.Failure(Errors.InsufficientFundsError);
         }
         
         var account = await _context.Accounts.FirstOrDefaultAsync
@@ -257,7 +258,7 @@ public class AccountService
             };
             return ServiceResult<WithdrawResponse>.Success(response);
         }
-        else return ServiceResult<WithdrawResponse>.Failure(Constants.ExceptionMessages.InsufficientFundsError);
+        else return ServiceResult<WithdrawResponse>.Failure(Errors.InsufficientFundsError);
     }
 
     public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string accountNo)
@@ -268,7 +269,7 @@ public class AccountService
         
         if (!isOnlyDigits)
         {
-            return ServiceResult<Unit>.Failure(Constants.ExceptionMessages.InvalidStatusError);
+            return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
         }
         
         var account = await _context.Accounts
@@ -276,7 +277,7 @@ public class AccountService
         
         if (account == null)
         {
-            return ServiceResult<Unit>.Failure(Constants.ExceptionMessages.AccountNotFoundError);
+            return ServiceResult<Unit>.Failure(Errors.AccountNotFoundError);
         }
         
         account.Status = request.Status;

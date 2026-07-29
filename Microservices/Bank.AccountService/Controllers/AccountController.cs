@@ -1,5 +1,6 @@
 ﻿using Bank.AccountService.Models.Dtos;
 using Bank.Shared;
+using Bank.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.AccountService.Controllers;
@@ -18,15 +19,8 @@ public class AccountController: ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        try
-        {
-            var accounts = await _accountService.GetAllAccountsAsync();
-            return Ok(accounts);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, Constants.ExceptionMessages.GetAccountError);
-        }
+        var accounts = await _accountService.GetAllAccountsAsync();
+        return Ok(accounts);
     }
 
     [HttpGet("{accountNo}")]
@@ -35,7 +29,7 @@ public class AccountController: ControllerBase
         var account = await _accountService.GetAccountByAccountNoAsync(accountNo);
         if (account == null)
         {
-            return NotFound(Constants.ExceptionMessages.AccountNotFoundError);
+            return NotFound(new ErrorResponse(Errors.AccountNotFoundError));
         }
         else return Ok(account);
     }
@@ -46,7 +40,7 @@ public class AccountController: ControllerBase
         var result = await _accountService.AddAccountAsync(createAccountRequest);
         if (result.Data == null)
         {
-            return StatusCode(403, result.ErrorMessage);
+            return StatusCode(403, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);
@@ -70,7 +64,7 @@ public class AccountController: ControllerBase
         var result = await _accountService.DepositAsync(depositRequest);
         if (result.Data == null)
         {
-            return StatusCode(result.StatusCode, result.ErrorMessage);
+            return StatusCode(result.StatusCode, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);
@@ -82,7 +76,7 @@ public class AccountController: ControllerBase
         var result = await _accountService.CashWithdrawAsync(withdrawRequest);
         if (result.Data == null)
         {
-            return StatusCode(result.StatusCode, result.ErrorMessage);
+            return StatusCode(result.StatusCode, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);
@@ -94,7 +88,7 @@ public class AccountController: ControllerBase
         var result = await _accountService.FastWithdrawAsync(withdrawRequest);
         if (result.Data == null)
         {
-            return StatusCode(result.StatusCode, result.ErrorMessage);
+            return StatusCode(result.StatusCode, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);
@@ -106,7 +100,7 @@ public class AccountController: ControllerBase
         var result = await _accountService.AssignStatusAsync(request, accountNo);
         if (result.Data == null)
         {
-            return StatusCode(403, result.ErrorMessage);
+            return StatusCode(403, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);

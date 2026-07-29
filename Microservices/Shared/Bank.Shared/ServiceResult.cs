@@ -4,7 +4,7 @@ public class ServiceResult<T>
 {
     public bool IsSuccess { get; private set; }
     public T? Data { get; private set; }
-    public string? ErrorMessage { get; private set; }
+    public Error? Error { get; private set; }
     public int StatusCode { get; private set; }
 
     public static ServiceResult<T> Success(T data, int statusCode = 200)
@@ -17,12 +17,12 @@ public class ServiceResult<T>
         };
     }
 
-    public static ServiceResult<T> Failure(string errorMessage, int statusCode = 400)
+    public static ServiceResult<T> Failure(Error error, int statusCode = 400)
     {
         return new ServiceResult<T>
         {
             IsSuccess = false,
-            ErrorMessage = errorMessage,
+            Error = error,
             StatusCode = statusCode
         };
     }

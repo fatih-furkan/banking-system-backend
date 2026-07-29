@@ -1,6 +1,6 @@
-﻿using System.IO.Enumeration;
-using Bank.CardService.Models.Dtos.ClientDtos;
+﻿using Bank.CardService.Models.Dtos.ClientDtos;
 using Bank.Shared;
+using Bank.Shared.Constants;
 
 namespace Bank.CardService.Clients;
 
@@ -30,8 +30,6 @@ public class AccountClient
 
         string responseBody =
             await response.Content.ReadAsStringAsync();
-
-        Console.WriteLine(responseBody + "\n\nELMA\n\n");
         
         if (!response.IsSuccessStatusCode)
         {
@@ -39,7 +37,7 @@ public class AccountClient
                 await response.Content.ReadAsStringAsync();
 
             return ServiceResult<CreateAccountResponse>.Failure(
-                "Account creation failed."
+                Errors.AccountCreateError
             );
         }
 
@@ -49,8 +47,8 @@ public class AccountClient
 
         if (result is null)
         {
-            throw new InvalidOperationException(
-                "Account service returned an empty response."
+            throw new GeneralException(
+                Errors.GetAccountError
             );
         }
 

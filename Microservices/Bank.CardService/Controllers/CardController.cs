@@ -1,6 +1,6 @@
-﻿using Bank.CardService.Models.Dtos;
-using Bank.CardService.Models.Dtos.ClientDtos.SagaDtos;
-using Bank.CardService.Sagas;
+﻿using Bank.CardService.Models.Dtos.ClientDtos.SagaDtos;
+using Bank.Shared;
+using Bank.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.CardService.Controllers;
@@ -10,12 +10,10 @@ namespace Bank.CardService.Controllers;
 public class CardController: ControllerBase
 {
     private Services.CardService _cardService;
-    private readonly CreateCardSaga _createCardSaga;
 
-    public CardController(Services.CardService cardService, CreateCardSaga createCardSaga)
+    public CardController(Services.CardService cardService)
     {
         _cardService = cardService;
-        _createCardSaga = createCardSaga;
     }
     
     [HttpGet]
@@ -28,7 +26,7 @@ public class CardController: ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, "Error while getting the cards" + ex);
+            return StatusCode(500, new ErrorResponse(Errors.GetCardError));
         }
     }
     
@@ -38,7 +36,7 @@ public class CardController: ControllerBase
         var card = await _cardService.GetCardByCardTokenAsync(cardToken);
         if (card == null)
         {
-            return NotFound("Card could not be found.");
+            return NotFound(new ErrorResponse(Errors.CardNotExistError));
         }
         else return Ok(card);
     }
@@ -53,12 +51,12 @@ public class CardController: ControllerBase
     [HttpPost]
     public async Task<IActionResult> Add(CreateCardSagaRequest createCardSagaRequest)
     {
-        var result = await _createCardSaga.ExecuteAsync(createCardSagaRequest);
+        var result = await _cardService.CreateCardAndAccountAsync(createCardSagaRequest);
         if (result.IsSuccess)
         {
             return StatusCode(201, result.Data);
         }
-        else return StatusCode(403, result.ErrorMessage);
+        else return StatusCode(403, new ErrorResponse(result.Error));
     }
     
     [HttpGet("belongs")]
@@ -78,6 +76,6 @@ public class CardController: ControllerBase
         {
             return Ok();
         }
-        else return StatusCode(400, "Card does not exist.");
+        else return StatusCode(400, new ErrorResponse(Errors.CardNotExistError));
     }
 }

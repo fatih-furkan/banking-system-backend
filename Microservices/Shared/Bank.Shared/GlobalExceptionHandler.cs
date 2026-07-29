@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Bank.Shared.Constants;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 
 namespace Bank.Shared;
@@ -21,31 +22,48 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         Exception exception,
         CancellationToken cancellationToken)
     {
-        _logger.LogError(
-            exception,
-            "An unhandled exception occurred. TraceId: {TraceId}",
-            httpContext.TraceIdentifier
+        string traceId = httpContext.TraceIdentifier;
+
+        Error error;
+        int statusCode;
+
+        if (exception is GeneralException generalException)
+        {
+            error = generalException.Error;
+            statusCode = generalException.StatusCode;
+
+            _logger.LogWarning(
+                exception,
+                "Handled application exception. ErrorCode: {ErrorCode}, TraceId: {TraceId}",
+                error.ErrorCode,
+                traceId
+            );
+        }
+        else
+        {
+            error = Errors.UnexpectedError;
+            statusCode = StatusCodes.Status500InternalServerError;
+
+            _logger.LogError(
+                exception,
+                "An unhandled exception occurred. TraceId: {TraceId}",
+                traceId
+            );
+        }
+
+        var response = new ErrorResponse(
+            error
         );
 
-        var problemDetails = new ProblemDetails
-        {
-            Status = StatusCodes.Status500InternalServerError,
-            Title = "An unexpected error occurred.",
-            Detail = "The operation could not be completed.",
-            Instance = httpContext.Request.Path
-        };
-
-        problemDetails.Extensions["traceId"] =
-            httpContext.TraceIdentifier;
-
-        httpContext.Response.StatusCode =
-            StatusCodes.Status500InternalServerError;
+        httpContext.Response.StatusCode = statusCode;
 
         await httpContext.Response.WriteAsJsonAsync(
-            problemDetails,
+            response,
             cancellationToken
         );
 
         return true;
     }
+    
+    
 }

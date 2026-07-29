@@ -3,6 +3,8 @@ using Bank.CustomerService.Models.Dtos;
 using Bank.CustomerService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 using Bank.Shared;
+using Bank.Shared.Constants;
+
 namespace Bank.CustomerService.Services;
 
 public class CustomerService
@@ -30,7 +32,7 @@ public class CustomerService
         bool onlyDigits = createCustomerRequest.Tc.All(char.IsDigit);
         if (!onlyDigits)
         {
-            return ServiceResult<CreateCustomerResponse>.Failure(Constants.ExceptionMessages.TcError);
+            return ServiceResult<CreateCustomerResponse>.Failure(Errors.TcError);
         }
         
         //Is the tc unique?
@@ -60,7 +62,7 @@ public class CustomerService
             return ServiceResult<CreateCustomerResponse>.Success(response);
         }
 
-        return ServiceResult<CreateCustomerResponse>.Failure(Constants.ExceptionMessages.TcAssignedError);
+        return ServiceResult<CreateCustomerResponse>.Failure(Errors.TcAssignedError);
     } 
 
     private async Task<long> GetNextCustomerIdSequenceValueAsync()
@@ -107,7 +109,7 @@ public class CustomerService
         
         if (!isOnlyDigits)
         {
-            return ServiceResult<Unit>.Failure("Status cannot contain letters.");
+            return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
         }
         
         var customer = await _context.Customers
@@ -115,7 +117,7 @@ public class CustomerService
         
         if (customer == null)
         {
-            return ServiceResult<Unit>.Failure("Account does not exist");
+            return ServiceResult<Unit>.Failure(Errors.AccountNotFoundError);
         }
         
         customer.Status = request.Status;

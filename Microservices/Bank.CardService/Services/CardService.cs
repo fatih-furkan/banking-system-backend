@@ -1,26 +1,35 @@
-﻿using System.Text;
-using Bank.CardService.Clients;
+﻿using Bank.CardService.Clients;
 using Bank.CardService.Data;
 using Bank.CardService.Models.Dtos;
+using Bank.CardService.Models.Dtos.ClientDtos.SagaDtos;
 using Bank.CardService.Models.Entities;
+using Bank.CardService.Sagas;
+using Bank.CardService.Services.Internal;
 using Microsoft.EntityFrameworkCore;
 using Bank.Shared;
+using Bank.Shared.Constants;
 
 namespace Bank.CardService.Services;
 
 public class CardService
 {
     private readonly AppDbContext _context;
+    private readonly CreateCardSaga _createCardSaga;
     private readonly CustomerClient _customerClient;
-    private readonly AccountClient _accountClient;
-
-    public CardService(AppDbContext context, 
-        CustomerClient customerClient, 
-        AccountClient accountClient)
+    private readonly CardCreator _cardCreator;
+    private readonly ILogger<CardService> _logger;
+    
+    public CardService(AppDbContext context,
+        CreateCardSaga createCardSaga,
+        CustomerClient customerClient,
+        CardCreator cardCreator,
+        ILogger<CardService> logger)
     {
         _context = context;
+        _createCardSaga = createCardSaga;
         _customerClient = customerClient;
-        _accountClient = accountClient;
+        _cardCreator = cardCreator;
+        _logger = logger;
     }
 
     public async Task<List<Card>> GetAllCardsAsync()
@@ -42,51 +51,7 @@ public class CardService
     {
         return await _context.Cards.AnyAsync(card => card.CardToken == cardToken && card.CustomerId == customerId);
     }
-
-    //should only be called from the saga.
-    public async Task<ServiceResult<CreateCardResponse>> CreateCardAsync(CreateCardRequest request)
-    {
-        bool customerExists = await _customerClient.CustomerExistsAsync(request.CustomerId.Value);
-        if (!customerExists)
-        {
-            return ServiceResult<CreateCardResponse>.Failure("Customer does not exist!");
-        }
-        
-        bool accountExists = await _accountClient.AccountExistsAsync(request.AccountNo);
-        if (!accountExists)
-        {
-            return ServiceResult<CreateCardResponse>.Failure("Account does not exist!");
-        }
-        
-        var (success, cardNo) = await GenerateCardNoAsync();
-        if (!success)
-        {
-            throw new InvalidOperationException();
-        }
-        
-        string cardToken = GenerateCardToken(cardNo);
-
-        var card = new Card
-        {
-            CardToken = cardToken,
-            CardNo = cardNo,
-            CardAccountNo = request.AccountNo,
-            CustomerId = request.CustomerId.Value
-        };
-        
-        _context.Cards.Add(card);
-        await _context.SaveChangesAsync();
-        
-        CreateCardResponse response = new CreateCardResponse
-        {
-            CardAccountNo = card.CardAccountNo,
-            CardToken = card.CardToken,
-            CustomerId = card.CustomerId
-        };
-        return ServiceResult<CreateCardResponse>.Success(response);
-    }
-
-
+    
     public async Task<bool> DeleteCard(string cardToken)
     {
         var card = await _context.Cards.FirstOrDefaultAsync();
@@ -99,78 +64,47 @@ public class CardService
 
         return false;
     }
-    private string GenerateCardToken(string cardNo)
-    {
-        
-        byte[] dataBytes = Encoding.UTF8.GetBytes(cardNo);
-        return Convert.ToBase64String(dataBytes);
-    }
 
-    private async Task<(bool,string)> GenerateCardNoAsync()
+    public async Task<ServiceResult<CreateCardResponse>> CreateCardAndAccountAsync(CreateCardSagaRequest request)
     {
-        StringBuilder cardNo = new StringBuilder("99999999");
-        var sequenceValue = await GetNextCardNoSequenceValueAsync();
-        cardNo.Append(sequenceValue);
+        bool customerExists = await _customerClient.CustomerExistsAsync(request.CustomerId.Value);
+        if (!customerExists)
+        {
+            return ServiceResult<CreateCardResponse>.Failure(Errors.CustomerNotExistError);
+        }
+        
+        var cardSagaResult = await _createCardSaga.ExecuteAsync(request);
+        if (cardSagaResult.IsSuccess == false)
+        {
+            return ServiceResult<CreateCardResponse>.Failure(Errors.CardSagaError);
+        }
         try
         {
-            int luhn = CalculateLuhnCheckDigit(cardNo.ToString());
-            cardNo.Append(luhn);
-            return (true,cardNo.ToString());
-        }
-        catch (ArgumentException ex)
-        {
-            Console.WriteLine(ex.Message);
-            return (false, "");
-        }
-        
-    }
-    
-    private async Task<string> GetNextCardNoSequenceValueAsync()
-    {
-        var connection = _context.Database.GetDbConnection();
-
-        await using var command = connection.CreateCommand();
-        command.CommandText = "SELECT CARD_NO_SEQ.NEXTVAL FROM DUAL";
-
-        if (connection.State != System.Data.ConnectionState.Open)
-        {
-            await connection.OpenAsync();
-        }
-
-        var result = await command.ExecuteScalarAsync();
-        var sequenceValue = Convert.ToInt64(result);
-        var formattedSeq = sequenceValue.ToString("D7");
-
-        return formattedSeq;
-    }
-
-    private static int CalculateLuhnCheckDigit(string numberWithoutCheckDigit)
-    {
-        if (string.IsNullOrWhiteSpace(numberWithoutCheckDigit))
-            throw new ArgumentException(Constants.ExceptionMessages.InvalidNumber);
-
-        int sum = 0;
-        bool shouldDouble = true;
-
-        for (int i = numberWithoutCheckDigit.Length - 1; i >= 0; i--)
-        {
-            if (!char.IsDigit(numberWithoutCheckDigit[i]))
-                throw new ArgumentException(Constants.ExceptionMessages.NumberContainsChar);
-
-            int digit = numberWithoutCheckDigit[i] - '0';
-
-            if (shouldDouble)
+            var result = await _cardCreator.CreateCardAsync(new CreateCardRequest
+                {
+                    AccountNo = cardSagaResult.Data!,
+                    BranchCode = request.BranchCode,
+                    CustomerId = request.CustomerId
+                }
+            );
+            if (!result.IsSuccess)
             {
-                digit *= 2;
-
-                if (digit > 9)
-                    digit -= 9;
+                await _createCardSaga.CompensateAsync(cardSagaResult.Data!);
             }
 
-            sum += digit;
-            shouldDouble = !shouldDouble;
+            return result;
         }
+        
+        catch (Exception e)
+        {
+            _logger.LogError(
+                e,
+                Constants.ExceptionMessages.CardSagaError
+            );
 
-        return (10 - (sum % 10)) % 10;
+            await _createCardSaga.CompensateAsync(cardSagaResult.Data!);
+
+            throw;
+        }
     }
 }

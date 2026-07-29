@@ -1,5 +1,6 @@
 ﻿using Bank.CustomerService.Models.Dtos;
 using Bank.Shared;
+using Bank.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bank.CustomerService.Controllers;
@@ -25,7 +26,7 @@ public class CustomerController: ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, Constants.ExceptionMessages.GetAccountError);
+            return StatusCode(500, new ErrorResponse(Errors.GetCustomerError));
         }
     }
     
@@ -35,7 +36,7 @@ public class CustomerController: ControllerBase
         var customer = await _customerService.GetCustomerByCustomerIdAsync(customerId);
         if (customer == null)
         {
-            return NotFound(Constants.ExceptionMessages.GetCustomerError);
+            return NotFound(new ErrorResponse(Errors.CustomerNotExistError));
         }
         else return Ok(customer);
     }
@@ -46,7 +47,7 @@ public class CustomerController: ControllerBase
         var result = await _customerService.AddCustomerAsync(createCustomerRequest);
         if (result.Data == null)
         {
-            return StatusCode(403, result.ErrorMessage);
+            return StatusCode(403, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);
@@ -76,7 +77,7 @@ public class CustomerController: ControllerBase
         var result = await _customerService.AssignStatusAsync(request, customerId);
         if (result.Data == null)
         {
-            return StatusCode(403, result.ErrorMessage);
+            return StatusCode(403, new ErrorResponse(result.Error));
         }
 
         return Ok(result.Data);

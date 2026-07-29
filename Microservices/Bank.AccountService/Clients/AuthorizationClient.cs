@@ -1,5 +1,6 @@
 ﻿using Bank.AccountService.Models.ClientModels;
 using Bank.Shared;
+using Bank.Shared.Constants;
 
 namespace Bank.AccountService.Clients;
 
@@ -32,8 +33,8 @@ public class AuthorizationClient
             await response.Content.ReadFromJsonAsync<CreateAuthorizationResponse>();
 
         return authorization
-               ?? throw new InvalidOperationException(
-                   Constants.ExceptionMessages.AuthorizationServiceResponseError
+               ?? throw new GeneralException(
+                   Errors.AuthorizationServiceResponseError
                );
     }
 }

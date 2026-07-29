@@ -3,6 +3,7 @@ using Bank.CardService.Clients;
 using Bank.CardService.Data;
 using Bank.CardService.Sagas;
 using Bank.CardService.Services;
+using Bank.CardService.Services.Internal;
 using Bank.Shared;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,6 +30,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<CardService>();
 builder.Services.AddScoped<CreateCardSaga>();
+builder.Services.AddScoped<CardCreator>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
