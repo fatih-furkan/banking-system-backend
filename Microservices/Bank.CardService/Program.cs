@@ -3,6 +3,7 @@ using Bank.CardService.Clients;
 using Bank.CardService.Data;
 using Bank.CardService.Sagas;
 using Bank.CardService.Services;
+using Bank.Shared;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,6 +46,9 @@ builder.Services.AddHttpClient<AccountClient>(client =>
     client.BaseAddress = new Uri("http://localhost:7000");
 });
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -52,6 +56,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
 

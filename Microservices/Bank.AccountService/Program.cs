@@ -1,6 +1,7 @@
 using Bank.AccountService.Clients;
 using Bank.AccountService.Data;
 using Bank.AccountService.Services;
+using Bank.Shared;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,6 +42,9 @@ builder.Services.AddHttpClient<AuthorizationClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:7006");
 });
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
