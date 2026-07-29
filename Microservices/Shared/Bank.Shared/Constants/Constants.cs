@@ -67,8 +67,13 @@ public class Constants
         public const string CustomerNotExistError = "The customer does not exist.";
         public const string LimitNotFoundError = "Limit could not be found.";
         public const string InsufficientLimitError = "Customer does not exist or has insufficient limit.";
-        public const string AuthCantCreatedError = "Authorization entry could not be created.";
+        public const string AuthCannotBeCreatedError = "Authorization entry could not be created.";
         public const string UseChargeLimitError = "Limits could not be used.";
         public const string ChargeLimitCompensationError = "Charge limit compensation is failed.";
+        public const string DepositCompensateError = "Deposit could not be compensated.";
+        public const string AuthClientError = "Auth client could not complete the action.";
+        public const string AuthCompensateError = "Authorization compensation process is failed.";
+        public const string ChargeLimitCreateError = "Charge limit could not be created.";
+        public const string SpendingLimitCreateError = "Spending limit could not be created.";
     }
 }

@@ -90,117 +90,151 @@ public class AccountService
         return false;
     }
 
-    public async Task<ServiceResult<DepositResponse>> DepositAsync(DepositRequest depositRequest)
+    public async Task<ServiceResult<DepositResponse>> DepositAsync(
+    DepositRequest request)
+{
+    if (request.ChannelCode == ChannelCode.Pos)
     {
-
-        if (depositRequest.ChannelCode == ChannelCode.Pos)
-        {
-            return ServiceResult<DepositResponse>.Failure(
-                Errors.UnauthorizedChannelError, 403);
-        }
-        if (decimal.Round(depositRequest.Amount!.Value, 2) != depositRequest.Amount)
-        {
-            return ServiceResult<DepositResponse>.Failure(
-                Errors.PrecisionError, 403);
-        }
-
-        if (depositRequest.Amount < 0)
-        {
-            return ServiceResult<DepositResponse>.Failure(
-                Errors.NegativeAmountError, 403);
-        }
-        
-        var account = await _context.Accounts.FirstOrDefaultAsync
-            (account => account.AccountNo == depositRequest.AccountNo);
-
-        UseChargeLimitRequest useChargeLimitRequest;
-        
-        if (account != null)
-        {
-            useChargeLimitRequest = new UseChargeLimitRequest
-            {
-                Amount = depositRequest.Amount,
-                ChannelCode = depositRequest.ChannelCode,
-                CustomerId = account.CustomerId
-            };
-        }
-        else return ServiceResult<DepositResponse>.Failure(Errors.AccountNotFoundError);
-
-        
-        var chargeLimitSagaResult = await _chargeLimitSaga.ExecuteAsync(useChargeLimitRequest);
-        if (!chargeLimitSagaResult.IsSuccess)
-        {
-            return ServiceResult<DepositResponse>.Failure(Errors.InsufficientLimitError);
-        }
-        
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE ACCOUNT
-             SET BALANCE = BALANCE + {depositRequest.Amount}
-             WHERE ACCOUNT_NO = {depositRequest.AccountNo}
-             """
+        return ServiceResult<DepositResponse>.Failure(
+            Errors.UnauthorizedChannelError,
+            StatusCodes.Status403Forbidden
         );
+    }
+
+    decimal amount = request.Amount.Value;
+
+    if (decimal.Round(amount, 2) != amount)
+    {
+        return ServiceResult<DepositResponse>.Failure(
+            Errors.PrecisionError,
+            StatusCodes.Status400BadRequest
+        );
+    }
+
+    if (amount <= 0)
+    {
+        return ServiceResult<DepositResponse>.Failure(
+            Errors.NegativeAmountError,
+            StatusCodes.Status400BadRequest
+        );
+    }
+
+    var account = await _context.Accounts
+        .FirstOrDefaultAsync(
+            account => account.AccountNo == request.AccountNo
+        );
+
+    if (account is null)
+    {
+        return ServiceResult<DepositResponse>.Failure(
+            Errors.AccountNotFoundError,
+            StatusCodes.Status404NotFound
+        );
+    }
+
+    var limitRequest = new UseChargeLimitRequest
+    {
+        Amount = amount,
+        ChannelCode = request.ChannelCode.Value,
+        CustomerId = account.CustomerId
+    };
+
+    bool limitUsed = false;
+    bool depositMade = false;
+    string? authorizationGuid = null;
+
+    try
+    {
+        var limitResult = await _chargeLimitSaga.ExecuteAsync(
+            limitRequest
+        );
+
+        if (!limitResult.IsSuccess)
+        {
+            return ServiceResult<DepositResponse>.Failure(
+                limitResult.Error ?? Errors.InsufficientLimitError,
+                limitResult.StatusCode
+            );
+        }
+
+        limitUsed = true;
+        
+        int affectedRows =
+            await _context.Database.ExecuteSqlInterpolatedAsync(
+                $"""
+                UPDATE ACCOUNT
+                SET BALANCE = BALANCE + {amount}
+                WHERE ACCOUNT_NO = {request.AccountNo}
+                """
+            );
 
         if (affectedRows == 0)
         {
-            return ServiceResult<DepositResponse>.Failure(Errors.AccountNotFoundError);
-        }
-
-        try
-        {
-            await _context.Entry(account)
-                .ReloadAsync();
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                "Failed to reload account {AccountNo}.",
-                account.AccountNo
-            );
-
-            throw;
-        }
-
-        if (_context.Entry(account).State == EntityState.Detached)
-        {
-            return ServiceResult<DepositResponse>.Failure(
-                Errors.AccountNotFoundError
+            throw new GeneralException(
+                Errors.AccountNotFoundError,
+                StatusCodes.Status404NotFound
             );
         }
-        
-        var authRequest = new CreateAuthorizationRequest
+
+        depositMade = true;
+
+        await _context.Entry(account)
+            .ReloadAsync();
+
+        var authorizationRequest = new CreateAuthorizationRequest
         {
             AccountNo = account.AccountNo,
             Balance = account.Balance,
             CardToken = null,
-            ChannelCode = depositRequest.ChannelCode!.Value,
+            ChannelCode = request.ChannelCode.Value,
             CustomerId = account.CustomerId,
             Otc = Constants.Otcs.Deposit,
-            Ots = depositRequest.ChannelCode == ChannelCode.Branch 
-                ? Constants.Ots.DepositOts.BranchDeposit : Constants.Ots.DepositOts.AtmDeposit,
-            TransactionAmount = depositRequest.Amount,
-            TransactionDescription = "deposit",
+            Ots = request.ChannelCode == ChannelCode.Branch
+                ? Constants.Ots.DepositOts.BranchDeposit
+                : Constants.Ots.DepositOts.AtmDeposit,
+            TransactionAmount = amount,
+            TransactionDescription = "Deposit",
             TransactionStatus = "1"
         };
+
+        var authorization =
+            await _authorizationClient.CreateAuthorizationAsync(
+                authorizationRequest
+            );
+
+        authorizationGuid = authorization.Guid;
+
+        throw new AbandonedMutexException();
         
-        try
-        {
-            var authResponse = await _authorizationClient.CreateAuthorizationAsync(authRequest);
-            
-            DepositResponse response = new DepositResponse
+        return ServiceResult<DepositResponse>.Success(
+            new DepositResponse
             {
-                TransactionAmount = authResponse.TransactionAmount,
-                Balance = authResponse.Balance,
-                TransactionTime = authResponse.TransactionDate
-            };
-            return ServiceResult<DepositResponse>.Success(response);
-        }
-        catch
-        {
-            return ServiceResult<DepositResponse>.Failure(Errors.AuthCantCreatedError);
-        }
+                TransactionAmount = authorization.TransactionAmount,
+                Balance = authorization.Balance,
+                TransactionTime = authorization.TransactionDate
+            }
+        );
     }
+    catch (Exception exception)
+    {
+        _logger.LogError(
+            exception,
+            "Deposit failed. Starting compensation. AccountNo: {AccountNo}",
+            request.AccountNo
+        );
+
+        await CompensateDepositAsync(
+            request.AccountNo,
+            amount,
+            limitRequest,
+            authorizationGuid,
+            depositMade,
+            limitUsed
+        );
+
+        throw;
+    }
+}
     
     public async Task<ServiceResult<WithdrawResponse>> CashWithdrawAsync(WithdrawRequest withdrawRequest)
     {
@@ -362,4 +396,91 @@ public class AccountService
         return await _context.Accounts.AnyAsync(account => account.AccountNo == accountNo);
     }
     
+    private async Task CompensateDepositAsync(
+        string accountNo,
+        decimal amount,
+        UseChargeLimitRequest limitRequest,
+        string? authorizationGuid,
+        bool depositMade,
+        bool limitUsed)
+    {
+        // Reverse order of completed operations.
+
+        if (authorizationGuid is not null)
+        {
+            try
+            {
+                var result = await _authorizationClient.AssignStatusAsync(
+                    authorizationGuid,
+                    "0"
+                );
+
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Authorization compensation failed. Guid: {Guid}",
+                        authorizationGuid
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Authorization compensation threw an exception. Guid: {Guid}",
+                    authorizationGuid
+                );
+            }
+        }
+
+        if (depositMade)
+        {
+            try
+            {
+                int affectedRows =
+                    await _context.Database.ExecuteSqlInterpolatedAsync(
+                        $"""
+                        UPDATE ACCOUNT
+                        SET BALANCE = BALANCE - {amount}
+                        WHERE ACCOUNT_NO = {accountNo}
+                        """,
+                        CancellationToken.None
+                    );
+
+                if (affectedRows == 0)
+                {
+                    _logger.LogError(
+                        "Deposit compensation failed. AccountNo: {AccountNo}",
+                        accountNo
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Deposit compensation threw an exception. AccountNo: {AccountNo}",
+                    accountNo
+                );
+            }
+        }
+
+        if (limitUsed)
+        {
+            try
+            {
+                await _chargeLimitSaga.CompensateAsync(
+                    limitRequest
+                );
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Limit compensation failed. CustomerId: {CustomerId}",
+                    limitRequest.CustomerId
+                );
+            }
+        }
+    }
 }

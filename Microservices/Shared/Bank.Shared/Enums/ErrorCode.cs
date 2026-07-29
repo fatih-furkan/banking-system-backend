@@ -37,6 +37,11 @@ public enum ErrorCode
     CustomerNotExistErr,
     LimitNotFoundErr,
     InsufficientLimitErr,
-    AuthCantCreatedErr,
-    UseChargeLimitErr
+    AuthCannotBeCreatedErr,
+    UseChargeLimitErr,
+    DepositCompensateErr,
+    AuthClientErr,
+    AuthCompensateErr,
+    ChargeLimitCreateErr,
+    SpendingLimitCreateErr
 }

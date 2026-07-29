@@ -33,4 +33,31 @@ public class AuthorizationClient
                    Errors.AuthorizationServiceResponseError
                );
     }
+
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(string guid, string status)
+    {
+        
+        var body = new
+        {
+            Status = status
+        };
+        
+        using var response = await _httpClient.PostAsJsonAsync(
+            $"/api/authorization/{guid}/assign-status",
+            body
+        );
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            string errorBody =
+                await response.Content.ReadAsStringAsync();
+
+            return ServiceResult<Unit>.Failure(
+                Errors.AuthClientError
+            );
+        }
+
+        return ServiceResult<Unit>.Success(new Unit());
+
+    }
 }

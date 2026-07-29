@@ -27,9 +27,6 @@ public class AccountClient
             $"/api/account",
             body
         );
-
-        string responseBody =
-            await response.Content.ReadAsStringAsync();
         
         if (!response.IsSuccessStatusCode)
         {

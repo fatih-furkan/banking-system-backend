@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Bank.CustomerService.Clients;
 using Bank.CustomerService.Data;
 using Bank.CustomerService.Services;
 using Bank.Shared;
@@ -26,6 +27,17 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 });
 
 builder.Services.AddScoped<CustomerService>();
+
+builder.Services.AddHttpClient<AccountClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:7000");
+});
+
+builder.Services.AddHttpClient<AuthorizationClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:7006");
+});
+
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

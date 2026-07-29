@@ -179,13 +179,39 @@ public static class Errors
             ErrorCode.InsufficientLimitErr,
             Constants.ExceptionMessages.InsufficientLimitError);
     
-    public static readonly Error AuthCantCreatedError =
+    public static readonly Error AuthCannotBeCreatedError =
         new(
-            ErrorCode.AuthCantCreatedErr,
-            Constants.ExceptionMessages.AuthCantCreatedError);
+            ErrorCode.AuthCannotBeCreatedErr,
+            Constants.ExceptionMessages.AuthCannotBeCreatedError);
 
     public static readonly Error UseChargeLimitError =
         new(
             ErrorCode.UseChargeLimitErr,
             Constants.ExceptionMessages.UseChargeLimitError);
+    
+    public static readonly Error DepositCompensateError =
+        new(
+            ErrorCode.DepositCompensateErr,
+            Constants.ExceptionMessages.DepositCompensateError);
+    
+    public static readonly Error AuthClientError =
+        new(
+            ErrorCode.AuthClientErr,
+            Constants.ExceptionMessages.AuthClientError);
+    
+    
+    public static readonly Error AuthCompensateError =
+        new(
+            ErrorCode.AuthCompensateErr,
+            Constants.ExceptionMessages.AuthCompensateError);
+    
+    public static readonly Error ChargeLimitCreateError =
+        new(
+            ErrorCode.ChargeLimitCreateErr,
+            Constants.ExceptionMessages.ChargeLimitCreateError);
+    
+    public static readonly Error SpendingLimitCreateError =
+        new(
+            ErrorCode.SpendingLimitCreateErr,
+            Constants.ExceptionMessages.SpendingLimitCreateError);
 }

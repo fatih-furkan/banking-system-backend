@@ -1,11 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿namespace Bank.AuthorizationService.Models.Entities;
 
-namespace Bank.AccountService.Models.Entities.Limit;
-
-public class CurrentAccountConsumptionLimit
+public class CurrentSpendingLimit
 {
-    [Required]
-    public string AccountNo { get; set; } = null!;
+    public long CustomerId { get; set; }
     public decimal DailyLimit { get; set; }
     public decimal MonthlyLimit { get; set; }
     public decimal AnnualLimit { get; set; }

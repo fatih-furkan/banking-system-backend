@@ -2,6 +2,7 @@
 using Bank.AuthorizationService.Models;
 using Bank.AuthorizationService.Models.Entities;
 using Bank.Shared;
+using Bank.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 
 namespace Bank.AuthorizationService.Services;
@@ -60,4 +61,27 @@ public class AuthorizationService
         return ServiceResult<CreateAuthorizationResponse>.Success(response);
     }
     
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string guid)
+    {
+        bool isOnlyDigits =
+            !string.IsNullOrEmpty(request.Status) &&
+            request.Status.All(c => c is >= '0' and <= '9');
+        
+        if (!isOnlyDigits)
+        {
+            return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
+        }
+        
+        var auth = await _context.Authorizations
+            .FirstOrDefaultAsync(auth => auth.Guid == guid);
+        
+        if (auth == null)
+        {
+            return ServiceResult<Unit>.Failure(Errors.AuthorizationGetError);
+        }
+        
+        auth.TransactionStatus = request.Status;
+        await _context.SaveChangesAsync();
+        return ServiceResult<Unit>.Success(new Unit());
+    }
 }

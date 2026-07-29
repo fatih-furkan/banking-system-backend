@@ -9,4 +9,6 @@ public class CreateAuthorizationResponse
     public decimal? Balance { get; set; }
 
     public decimal? TransactionAmount { get; set; }
+
+    public string Guid { get; set; } = null!;
 }

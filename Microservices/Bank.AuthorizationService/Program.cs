@@ -1,3 +1,4 @@
+using Bank.AuthorizationService.Clients;
 using Bank.AuthorizationService.Data;
 using Bank.AuthorizationService.Services;
 using Bank.Shared;
@@ -24,7 +25,13 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     );
 });
 
+builder.Services.AddHttpClient<CustomerClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:7004");
+});
+
 builder.Services.AddScoped<AuthorizationService>();
+builder.Services.AddScoped<SpendingLimitService>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bank.AccountService.Models.Dtos.Limit;
+namespace Bank.CustomerService.Models.ClientModels;
 
 public class CreateChargeLimitRequest
 {

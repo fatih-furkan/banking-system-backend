@@ -1,6 +1,6 @@
-﻿namespace Bank.AccountService.Models.Dtos.Limit;
+﻿namespace Bank.AuthorizationService.Models.Dtos;
 
-public class CreateChargeLimitResponse
+public class CreateSpendingLimitResponse
 {
     public long CustomerId { get; set; }
     public decimal DailyLimit { get; set; }

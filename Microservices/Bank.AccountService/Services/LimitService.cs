@@ -54,25 +54,38 @@ public class LimitService
             var limit = new ChargeLimit
             {
                 CustomerId = createChargeLimitRequest.CustomerId.Value,
-                AnnualLimit = 0,
-                DailyLimit = 0,
-                MonthlyLimit = 0
-                //todo limitler nasıl belirleniyor
+                AnnualLimit = createChargeLimitRequest.AnnualLimit!.Value,
+                DailyLimit = createChargeLimitRequest.DailyLimit!.Value,
+                MonthlyLimit = createChargeLimitRequest.MonthlyLimit!.Value
+            };
+            
+            var currentLimit = new CurrentChargeLimit
+            {
+                CustomerId = createChargeLimitRequest.CustomerId.Value,
+                AnnualLimit = createChargeLimitRequest.AnnualLimit.Value,
+                DailyLimit = createChargeLimitRequest.DailyLimit.Value,
+                MonthlyLimit = createChargeLimitRequest.MonthlyLimit.Value
             };
             
             _context.ChargeLimits.Add(limit);
+            _context.CurrentChargeLimits.Add(currentLimit);
             await _context.SaveChangesAsync();
+            
             CreateChargeLimitResponse response = new CreateChargeLimitResponse
             {
                 CustomerId = limit.CustomerId,
                 AnnualLimit = limit.AnnualLimit,
                 MonthlyLimit = limit.MonthlyLimit,
-                DailyLimit = limit.MonthlyLimit
+                DailyLimit = limit.DailyLimit,
+                CurrentAnnualLimit = currentLimit.AnnualLimit,
+                CurrentMonthlyLimit = currentLimit.MonthlyLimit,
+                CurrentDailyLimit =  currentLimit.DailyLimit
             };
             return ServiceResult<CreateChargeLimitResponse?>.Success(response);
         }
     }
     
+    //don't use
     public async Task<ServiceResult<CreateCurrentChargeLimitResponse?>> AddCurrentChargeLimitAsync(
         CreateCurrentChargeLimitRequest createCurrentChargeLimitRequest)
     {
@@ -91,7 +104,6 @@ public class LimitService
                 AnnualLimit = 0,
                 DailyLimit = 0,
                 MonthlyLimit = 0
-                //todo limitler nasıl belirleniyor
             };
             
             _context.CurrentChargeLimits.Add(limit);

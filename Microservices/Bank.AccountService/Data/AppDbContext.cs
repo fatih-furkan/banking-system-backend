@@ -51,11 +51,14 @@ public class AppDbContext: DbContext
                 entity.Property(e => e.CustomerId)
                     .HasColumnName("CUSTOMER_ID");
                 entity.Property(e => e.DailyLimit)
-                    .HasColumnName("DAILY_LIMIT");
+                    .HasColumnName("DAILY_LIMIT")
+                    .HasPrecision(18, 2);
                 entity.Property(e => e.MonthlyLimit)
-                    .HasColumnName("MONTHLY_LIMIT");
+                    .HasColumnName("MONTHLY_LIMIT")
+                    .HasPrecision(18, 2);
                 entity.Property(e => e.AnnualLimit)
-                    .HasColumnName("ANNUAL_LIMIT");
+                    .HasColumnName("ANNUAL_LIMIT")
+                    .HasPrecision(18, 2);
             }
         );
         
@@ -68,11 +71,14 @@ public class AppDbContext: DbContext
                 entity.Property(e => e.CustomerId)
                     .HasColumnName("CUSTOMER_ID");
                 entity.Property(e => e.DailyLimit)
-                    .HasColumnName("DAILY_LIMIT");
+                    .HasColumnName("DAILY_LIMIT")
+                    .HasPrecision(18, 2);
                 entity.Property(e => e.MonthlyLimit)
-                    .HasColumnName("MONTHLY_LIMIT");
+                    .HasColumnName("MONTHLY_LIMIT")
+                    .HasPrecision(18, 2);
                 entity.Property(e => e.AnnualLimit)
-                    .HasColumnName("ANNUAL_LIMIT");
+                    .HasColumnName("ANNUAL_LIMIT")
+                    .HasPrecision(18, 2);
                 entity.Property(e => e.LastDailyReset)
                     .HasColumnName("LAST_DAILY_RESET");
                 entity.Property(e => e.LastMonthlyReset)

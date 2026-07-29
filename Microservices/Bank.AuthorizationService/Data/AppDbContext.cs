@@ -12,12 +12,14 @@ public class AppDbContext: DbContext
     }
 
     public DbSet<Authorization> Authorizations => Set<Authorization>();
+    public DbSet<SpendingLimit> SpendingLimits => Set<SpendingLimit>();
+    public DbSet<CurrentSpendingLimit> CurrentSpendingLimits => Set<CurrentSpendingLimit>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Authorization>(entity =>
         {
-            entity.ToTable("AUTHORIZATION"); // Gerçek tablo adını yaz
+            entity.ToTable("AUTHORIZATION");
 
             entity.HasKey(e => e.Guid);
 
@@ -77,5 +79,45 @@ public class AppDbContext: DbContext
                 .HasColumnName("TXN_AMOUNT")
                 .HasPrecision(18, 2);
         });
+        
+        modelBuilder.Entity<SpendingLimit>(entity =>
+            {
+                entity.ToTable("SPENDING_LIMITS");
+                
+                entity.HasKey(e => e.CustomerId);
+                
+                entity.Property(e => e.CustomerId)
+                    .HasColumnName("CUSTOMER_ID");
+                entity.Property(e => e.DailyLimit)
+                    .HasColumnName("DAILY_LIMIT");
+                entity.Property(e => e.MonthlyLimit)
+                    .HasColumnName("MONTHLY_LIMIT");
+                entity.Property(e => e.AnnualLimit)
+                    .HasColumnName("ANNUAL_LIMIT");
+            }
+        );
+        
+        modelBuilder.Entity<CurrentSpendingLimit>(entity =>
+            {
+                entity.ToTable("CURRENT_SPENDING_LIMITS");
+                
+                entity.HasKey(e => e.CustomerId);
+                
+                entity.Property(e => e.CustomerId)
+                    .HasColumnName("CUSTOMER_ID");
+                entity.Property(e => e.DailyLimit)
+                    .HasColumnName("DAILY_LIMIT");
+                entity.Property(e => e.MonthlyLimit)
+                    .HasColumnName("MONTHLY_LIMIT");
+                entity.Property(e => e.AnnualLimit)
+                    .HasColumnName("ANNUAL_LIMIT");
+                entity.Property(e => e.LastDailyReset)
+                    .HasColumnName("LAST_DAILY_RESET");
+                entity.Property(e => e.LastMonthlyReset)
+                    .HasColumnName("LAST_MONTHLY_RESET");
+                entity.Property(e => e.LastAnnualReset)
+                    .HasColumnName("LAST_ANNUAL_RESET");
+            }
+        );
     }
 }

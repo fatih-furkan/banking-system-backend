@@ -1,4 +1,6 @@
-﻿using Bank.CustomerService.Data;
+﻿using Bank.CustomerService.Clients;
+using Bank.CustomerService.Data;
+using Bank.CustomerService.Models.ClientModels;
 using Bank.CustomerService.Models.Dtos;
 using Bank.CustomerService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -10,10 +12,16 @@ namespace Bank.CustomerService.Services;
 public class CustomerService
 {
     private readonly AppDbContext _context;
+    private readonly AccountClient _accountClient;
+    private readonly AuthorizationClient _authorizationClient;
 
-    public CustomerService(AppDbContext context)
+    public CustomerService(AppDbContext context, 
+        AccountClient accountClient,
+        AuthorizationClient authorizationClient)
     {
         _context = context;
+        _accountClient = accountClient;
+        _authorizationClient = authorizationClient;
     }
 
     public async Task<List<Customer>> GetAllCustomersAsync()
@@ -38,6 +46,7 @@ public class CustomerService
         //Is the tc unique?
         var existingTc = await _context.Customers
             .FirstOrDefaultAsync(account => account.Tc == createCustomerRequest.Tc);
+        
         if (existingTc == null)
         {
             var customerId = await GetNextCustomerIdSequenceValueAsync();
@@ -47,10 +56,44 @@ public class CustomerService
                 Name = createCustomerRequest.Name,
                 Surname = createCustomerRequest.Surname,
                 Tc = createCustomerRequest.Tc,
-                Status = createCustomerRequest.Status
+                Status = "2"
             };
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
+
+            var createChargeLimitResult = await _accountClient.AddChargeLimitAsync(
+                new CreateChargeLimitRequest
+                {
+                    AnnualLimit = 1000000, //todo bu degerler nereye konmali
+                    MonthlyLimit = 100000,
+                    DailyLimit = 10000,
+                    CustomerId = customerId
+                });
+
+            if (!createChargeLimitResult.IsSuccess)
+            {
+                return ServiceResult<CreateCustomerResponse>
+                    .Failure(Errors.ChargeLimitCreateError);
+            }
+            
+            var createSpendingLimitResult = await _authorizationClient.AddSpendingLimitAsync(
+                new CreateSpendingLimitRequest
+                {
+                    AnnualLimit = 2000000, //todo bu degerler nereye konmali
+                    MonthlyLimit = 200000,
+                    DailyLimit = 20000,
+                    CustomerId = customerId
+                });
+
+            if (!createSpendingLimitResult.IsSuccess)
+            {
+                return ServiceResult<CreateCustomerResponse>
+                    .Failure(Errors.SpendingLimitCreateError);
+            }
+
+            customer.Status = createCustomerRequest.Status;
+            await _context.SaveChangesAsync();
+            
             CreateCustomerResponse response = new CreateCustomerResponse
             {
                 Name = customer.Name,

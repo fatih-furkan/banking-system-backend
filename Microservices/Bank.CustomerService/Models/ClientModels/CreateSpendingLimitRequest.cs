@@ -1,8 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bank.AccountService.Models.Dtos.Limit;
+namespace Bank.CustomerService.Models.ClientModels;
 
-public class CreateChargeLimitRequest
+public class CreateSpendingLimitRequest
 {
     [Required]
     public long? CustomerId { get; set; }

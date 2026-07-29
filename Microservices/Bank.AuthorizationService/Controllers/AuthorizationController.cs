@@ -41,4 +41,16 @@ public class AuthorizationController: ControllerBase
 
         return Ok(result.Data);
     } 
+    
+    [HttpPost("{guid}/assign-status")]
+    public async Task<IActionResult> AssignStatus(AssignStatusRequest request, string guid)
+    {
+        var result = await _authorizationService.AssignStatusAsync(request, guid);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(403, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
 }
