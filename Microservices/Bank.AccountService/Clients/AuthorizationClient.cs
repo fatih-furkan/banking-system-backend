@@ -1,0 +1,38 @@
+﻿using Bank.AccountService.Models.ClientModels;
+
+namespace Bank.AccountService.Clients;
+
+public class AuthorizationClient
+{
+    private readonly HttpClient _httpClient;
+
+    public AuthorizationClient(HttpClient httpClient)
+    {
+        _httpClient = httpClient;
+    }
+
+    public async Task<CreateAuthorizationResponse> CreateAuthorizationAsync(CreateAuthorizationRequest request)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/authorization",
+            request
+        );
+
+        
+        var responseBody = await response.Content.ReadAsStringAsync();
+        
+        
+        Console.WriteLine(responseBody + "\n\n");
+        
+        
+        response.EnsureSuccessStatusCode();
+
+        var authorization =
+            await response.Content.ReadFromJsonAsync<CreateAuthorizationResponse>();
+
+        return authorization
+               ?? throw new InvalidOperationException(
+                   "AuthorizationService response is invalid."
+               );
+    }
+}
