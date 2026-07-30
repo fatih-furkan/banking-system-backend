@@ -90,5 +90,8 @@ public class Constants
         public const string AccountSaleError = "Account sale did not answer as expected.";
         public const string SpendingLimitCompensationError = "Charge limit compensation is failed.";
         public const string LimitAlreadyExistsError = "A limit entry already exists for this customer.";
+        public const string CustomerNotFoundError = "Customer could not be found.";
+        public const string AuthorizationCreateError = "Authorization could not be created.";
+        public const string AccountSaleCompensationError = "Account sale could not be compensated.";
     }
 }

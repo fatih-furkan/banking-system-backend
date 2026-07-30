@@ -125,4 +125,16 @@ public class AccountController: ControllerBase
 
         return Ok(result.Data);
     }
+    
+    [HttpPost("compensate-sale")]
+    public async Task<IActionResult> CompensateSale(SaleRequest request)
+    {
+        var result = await _accountService.CompensateSaleAsync(request);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(403, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
 }

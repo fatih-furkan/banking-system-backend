@@ -1,24 +1,22 @@
-﻿using Bank.Shared.Enums;
+﻿using Bank.Shared.Constants;
+using Bank.Shared.Enums;
 
 namespace Bank.Shared;
 
 public class ErrorResponse
 {
-    public ErrorCode ErrorCode { get; }
-    public string ErrorDescription { get; }
+    public Error Error { get; }
     public DateTime Timestamp { get; }
 
     public ErrorResponse(Error? error)
     {
         if (error == null)
         {
-            ErrorCode = ErrorCode.UnexpectedErr;
-            ErrorDescription = Constants.Constants.ExceptionMessages.UnexpectedError;
+            this.Error = Errors.UnexpectedError;
         }
         else
         {
-            ErrorCode = error.ErrorCode;
-            ErrorDescription = error.ErrorDescription;
+            this.Error = error;
         }
 
         Timestamp = DateTime.UtcNow;
@@ -26,6 +24,6 @@ public class ErrorResponse
     
     public override string ToString()
     {
-        return $"ErrorCode: {ErrorCode}\nError Description: {ErrorDescription}\nTime: {Timestamp}";
+        return $"ErrorCode: {Error.ErrorCode}\nError Description: {Error.ErrorDescription}\nTime: {Timestamp}";
     }
 }

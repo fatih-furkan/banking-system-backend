@@ -46,5 +46,7 @@ public enum ErrorCode
     SpendingLimitCreateErr,
     CardClientErr,
     AccountSaleErr,
-    LimitAlreadyExistsErr
+    LimitAlreadyExistsErr,
+    CustomerNotFoundErr,
+    AuthorizationCreateErr
 }

@@ -64,6 +64,7 @@ builder.Services.AddHttpClient<AccountClient>(client =>
 builder.Services.AddScoped<AuthorizationService>();
 builder.Services.AddScoped<SpendingLimitService>();
 builder.Services.AddScoped<SpendingLimitSaga>();
+builder.Services.AddScoped<AccountSaleSaga>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

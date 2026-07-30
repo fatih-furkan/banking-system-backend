@@ -18,16 +18,22 @@ public class AuthorizationService
     private readonly CardClient _cardClient;
     private readonly AccountClient _accountClient;
     private readonly SpendingLimitSaga _spendingLimitSaga;
+    private readonly AccountSaleSaga _accountSaleSaga;
+    private readonly ILogger<AuthorizationService> _logger;
     
     public AuthorizationService(AppDbContext context, 
         CardClient cardClient,
         AccountClient accountClient,
-        SpendingLimitSaga spendingLimitSaga)
+        SpendingLimitSaga spendingLimitSaga,
+        AccountSaleSaga accountSaleSaga,
+        ILogger<AuthorizationService> logger)
     {
         _context = context;
         _cardClient = cardClient;
         _accountClient = accountClient;
         _spendingLimitSaga = spendingLimitSaga;
+        _accountSaleSaga = accountSaleSaga;
+        _logger = logger;
     }
     
     public async Task<List<Authorization>> GetAllAuthorizationsAsync()
@@ -101,114 +107,279 @@ public class AuthorizationService
         return ServiceResult<Unit>.Success(new Unit());
     }
 
-    public async Task<ServiceResult<SaleResponse>> SaleAsync(SaleRequest request)
+    public async Task<ServiceResult<SaleResponse>> SaleAsync(
+    SaleRequest request)
     {
-        if (decimal.Round(request.Amount!.Value, 2) != request.Amount)
-        {
-            return ServiceResult<SaleResponse>.Failure(
-                Errors.PrecisionError, 403);
-        }
-        
-        if (request.Amount < 0)
-        {
-            return ServiceResult<SaleResponse>.Failure(
-            Errors.NegativeAmountError, 403);
-        }
+        decimal amount = request.Amount.Value;
 
-        if (request.ChannelCode != ChannelCode.Fast
-            && request.ChannelCode != ChannelCode.Online
-            && request.ChannelCode != ChannelCode.Pos)
+        if (decimal.Round(amount, 2) != amount)
         {
             return ServiceResult<SaleResponse>.Failure(
-                Errors.UnauthorizedChannelError, 403);
-        }
-        
-        var accountNoResult = await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
-        if (!accountNoResult.IsSuccess || accountNoResult.Data == null)
-        {
-            return ServiceResult<SaleResponse>.Failure(
-                Errors.AccountNotFoundError, 403);
-        }
-
-        string accountNo = accountNoResult.Data;
-        
-        var customerIdResult = await _accountClient.GetCustomerIdAsync(accountNo);
-        if (!customerIdResult.IsSuccess || customerIdResult.Data == null)
-        {
-            return ServiceResult<SaleResponse>.Failure(
-                Errors.AccountNotFoundError, 403);
-        }
-
-        long customerId = customerIdResult.Data.Value;
-        
-        var limitRequest = new UseSpendingLimitRequest
-        {
-            Amount = request.Amount,
-            ChannelCode = request.ChannelCode.Value,
-            CustomerId = customerId
-        };
-        
-        
-        // use limit
-        
-        var limitResult = await _spendingLimitSaga.ExecuteAsync(
-            limitRequest
-        );
-
-        if (!limitResult.IsSuccess)
-        {
-            return ServiceResult<SaleResponse>.Failure(
-                limitResult.Error ?? Errors.InsufficientLimitError,
-                limitResult.StatusCode
+                Errors.PrecisionError,
+                StatusCodes.Status400BadRequest
             );
         }
 
-        //finalize the process
-        
-        var accountSaleResult = await _accountClient.AccountSaleAsync(new AccountSaleRequest
+        if (amount <= 0)
         {
-            AccountNo = accountNo,
-            Amount = request.Amount,
-            TransactionId = request.TransactionId
-        });
-
-        if (!accountSaleResult.IsSuccess || accountSaleResult.Data == null)
-        {
-            //todo compensate eklenebilir mi?
-            
             return ServiceResult<SaleResponse>.Failure(
-                Errors.AccountSaleError, 403);
+                Errors.NegativeAmountError,
+                StatusCodes.Status400BadRequest
+            );
         }
-        
-        //create database entry
-        
-        var authRequest = new CreateAuthorizationRequest
+
+        if (request.ChannelCode != ChannelCode.Fast &&
+            request.ChannelCode != ChannelCode.Online &&
+            request.ChannelCode != ChannelCode.Pos)
         {
-            AccountNo = accountNo,
-            Balance = accountSaleResult.Data.Balance,
-            CardToken = null,
-            ChannelCode = request.ChannelCode!.Value,
-            CustomerId = accountSaleResult.Data.CustomerId,
-            Otc = Constants.Otcs.Sale,
-            Ots = Constants.Ots.SaleOts.Default,
-            TransactionAmount = request.Amount,
-            TransactionDescription = "sale",
-            TransactionStatus = "1",
-            TransactionId = request.TransactionId
+            return ServiceResult<SaleResponse>.Failure(
+                Errors.UnauthorizedChannelError,
+                StatusCodes.Status403Forbidden
+            );
+        }
+
+        var accountNoResult =
+            await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
+
+        if (!accountNoResult.IsSuccess ||
+            string.IsNullOrWhiteSpace(accountNoResult.Data))
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                accountNoResult.Error ?? Errors.AccountNotFoundError,
+                accountNoResult.StatusCode
+            );
+        }
+
+        string accountNo = accountNoResult.Data;
+
+        var customerIdResult =
+            await _accountClient.GetCustomerIdAsync(accountNo);
+
+        if (!customerIdResult.IsSuccess ||
+            customerIdResult.Data is null)
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                customerIdResult.Error ?? Errors.CustomerNotFoundError,
+                customerIdResult.StatusCode
+            );
+        }
+
+        long customerId = customerIdResult.Data.Value;
+
+        var limitRequest = new UseSpendingLimitRequest
+        {
+            Amount = amount,
+            ChannelCode = request.ChannelCode.Value,
+            CustomerId = customerId
         };
 
-        var createAuthorizationResult = await CreateAuthorizationAsync(authRequest);
-        if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
-        {
-            //todo compensate
-        }
+        bool spendingLimitUsed = false;
+        bool accountSaleMade = false;
+        string? authorizationGuid = null;
 
-        return ServiceResult<SaleResponse>.Success(new SaleResponse
+        try
         {
-            Balance = accountSaleResult.Data.Balance,
-            TransactionAmount = request.Amount.Value,
-            TransactionTime = DateTime.UtcNow
-        });
+            var limitResult =
+                await _spendingLimitSaga.ExecuteAsync(limitRequest);
+
+            if (!limitResult.IsSuccess)
+            {
+                return ServiceResult<SaleResponse>.Failure(
+                    limitResult.Error ?? Errors.InsufficientLimitError,
+                    limitResult.StatusCode
+                );
+            }
+
+            spendingLimitUsed = true;
+
+            var accountSaleRequest = new AccountSaleRequest
+            {
+                AccountNo = accountNo,
+                Amount = amount,
+                TransactionId = request.TransactionId
+            };
+
+            var accountSaleSagaResult = await _accountSaleSaga.ExecuteAsync(accountSaleRequest);
+            if (!accountSaleSagaResult.IsSuccess || accountSaleSagaResult.Data == null)
+            {
+                throw new GeneralException(
+                    accountSaleSagaResult.Error ?? Errors.AccountSaleError,
+                    accountSaleSagaResult.StatusCode
+                );
+            }
+            
+            accountSaleMade = true;
+
+            var authorizationRequest = new CreateAuthorizationRequest
+            {
+                AccountNo = accountNo,
+                Balance = accountSaleSagaResult.Data.Balance,
+                CardToken = request.CardNo,
+                ChannelCode = request.ChannelCode.Value,
+                CustomerId = accountSaleSagaResult.Data.CustomerId,
+                Otc = Constants.Otcs.Sale,
+                Ots = Constants.Ots.SaleOts.Default,
+                TransactionAmount = amount,
+                TransactionDescription = "Sale",
+                TransactionStatus = "1",
+                TransactionId = request.TransactionId
+            };
+
+            var authorizationResult =
+                await CreateAuthorizationAsync(authorizationRequest);
+
+            if (!authorizationResult.IsSuccess ||
+                authorizationResult.Data is null)
+            {
+                throw new GeneralException(
+                    authorizationResult.Error ??
+                    Errors.AuthorizationCreateError,
+                    authorizationResult.StatusCode
+                );
+            }
+
+            authorizationGuid = authorizationResult.Data.Guid;
+            
+            return ServiceResult<SaleResponse>.Success(
+                new SaleResponse
+                {
+                    Balance = accountSaleSagaResult.Data.Balance,
+                    TransactionAmount = amount,
+                    TransactionTime =
+                        authorizationResult.Data.TransactionDate
+                }
+            );
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Sale failed. Starting compensation. " +
+                "AccountNo: {AccountNo}, CardNo: {CardNo}, " +
+                "TransactionId: {TransactionId}",
+                accountNo,
+                request.CardNo,
+                request.TransactionId
+            );
+
+            await CompensateSaleAsync(
+                accountNo,
+                amount,
+                request.TransactionId,
+                limitRequest,
+                authorizationGuid,
+                accountSaleMade,
+                spendingLimitUsed
+            );
+
+            throw;
+        }
     }
     
+    private async Task CompensateSaleAsync(
+    string accountNo,
+    decimal amount,
+    long? transactionId,
+    UseSpendingLimitRequest limitRequest,
+    string? authorizationGuid,
+    bool accountSaleMade,
+    bool spendingLimitUsed)
+    {
+        // 1. Compensate authorization first.
+        if (authorizationGuid is not null)
+        {
+            try
+            {
+                var authorizationCompensationResult =
+                    await AssignStatusAsync(
+                        new AssignStatusRequest
+                        {
+                            Status = "0"
+                        } ,
+                        authorizationGuid
+                    );
+
+                if (!authorizationCompensationResult.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Authorization compensation failed. " +
+                        "AuthorizationGuid: {AuthorizationGuid}, " +
+                        "TransactionId: {TransactionId}",
+                        authorizationGuid,
+                        transactionId
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Authorization compensation threw an exception. " +
+                    "AuthorizationGuid: {AuthorizationGuid}, " +
+                    "TransactionId: {TransactionId}",
+                    authorizationGuid,
+                    transactionId
+                );
+            }
+        }
+
+        // 2. Refund the amount deducted by AccountService.
+        if (accountSaleMade)
+        {
+            try
+            {
+                var accountCompensationResult =
+                    await _accountClient.AccountSaleCompensateAsync(
+                        new AccountSaleRequest
+                        {
+                            AccountNo = accountNo,
+                            Amount = amount,
+                            TransactionId = transactionId
+                        }
+                    );
+
+                if (!accountCompensationResult.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Account sale compensation failed. " +
+                        "AccountNo: {AccountNo}, " +
+                        "TransactionId: {TransactionId}",
+                        accountNo,
+                        transactionId
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Account sale compensation threw an exception. " +
+                    "AccountNo: {AccountNo}, " +
+                    "TransactionId: {TransactionId}",
+                    accountNo,
+                    transactionId
+                );
+            }
+        }
+
+        // 3. Restore the spending limit.
+        if (spendingLimitUsed)
+        {
+            try
+            {
+                await _spendingLimitSaga.CompensateAsync(limitRequest);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Spending limit compensation threw an exception. " +
+                    "CustomerId: {CustomerId}, " +
+                    "TransactionId: {TransactionId}",
+                    limitRequest.CustomerId,
+                    transactionId
+                );
+            }
+        }
+    }
 }

@@ -229,4 +229,14 @@ public static class Errors
         new(
             ErrorCode.LimitAlreadyExistsErr,
             Constants.ExceptionMessages.LimitAlreadyExistsError);
+    
+    public static readonly Error CustomerNotFoundError =
+        new(
+            ErrorCode.CustomerNotFoundErr,
+            Constants.ExceptionMessages.CustomerNotFoundError);
+    
+    public static readonly Error AuthorizationCreateError =
+        new(
+            ErrorCode.AuthorizationCreateErr,
+            Constants.ExceptionMessages.AuthorizationCreateError);
 }
