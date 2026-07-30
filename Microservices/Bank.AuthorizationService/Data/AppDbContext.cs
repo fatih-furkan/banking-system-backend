@@ -26,7 +26,8 @@ public class AppDbContext: DbContext
             entity.Property(e => e.Guid)
                 .HasColumnName("GUID")
                 .HasMaxLength(40)
-                .IsRequired();
+                .IsRequired()
+                .ValueGeneratedNever();
 
             entity.Property(e => e.TransactionStatus)
                 .HasColumnName("TRXN_STATUS")
@@ -34,15 +35,16 @@ public class AppDbContext: DbContext
 
             entity.Property(e => e.CustomerId)
                 .HasColumnName("CUSTOMER_ID")
-                .HasPrecision(20, 0)
+                .HasPrecision(18, 0)
                 .IsRequired();
 
             entity.Property(e => e.CardToken)
                 .HasColumnName("CARD_TOKEN")
-                .HasMaxLength(100);
+                .HasMaxLength(30);
 
             entity.Property(e => e.TransactionDate)
-                .HasColumnName("TRXN_DATE");
+                .HasColumnName("TRXN_DATE")
+                .HasColumnType("DATE");
 
             entity.Property(e => e.Otc)
                 .HasColumnName("OTC")
@@ -76,7 +78,7 @@ public class AppDbContext: DbContext
                 .HasPrecision(18, 2);
 
             entity.Property(e => e.TransactionAmount)
-                .HasColumnName("TXN_AMOUNT")
+                .HasColumnName("TRXN_AMOUNT")
                 .HasPrecision(18, 2);
             
             entity.Property(e => e.TransactionId)
@@ -91,7 +93,11 @@ public class AppDbContext: DbContext
                 entity.HasKey(e => e.CustomerId);
                 
                 entity.Property(e => e.CustomerId)
-                    .HasColumnName("CUSTOMER_ID");
+                    .HasColumnName("CUSTOMER_ID")
+                    .HasPrecision(18)
+                    .ValueGeneratedNever();
+                
+                
                 entity.Property(e => e.DailyLimit)
                     .HasColumnName("DAILY_LIMIT")
                     .HasPrecision(18, 2);
@@ -112,22 +118,33 @@ public class AppDbContext: DbContext
                 entity.HasKey(e => e.CustomerId);
                 
                 entity.Property(e => e.CustomerId)
-                    .HasColumnName("CUSTOMER_ID");
+                    .HasColumnName("CUSTOMER_ID")
+                    .HasPrecision(18)
+                    .ValueGeneratedNever();
+                
                 entity.Property(e => e.DailyLimit)
                     .HasColumnName("DAILY_LIMIT")
                     .HasPrecision(18, 2);
+                
                 entity.Property(e => e.MonthlyLimit)
                     .HasColumnName("MONTHLY_LIMIT")
                     .HasPrecision(18, 2);
+                
                 entity.Property(e => e.AnnualLimit)
                     .HasColumnName("ANNUAL_LIMIT")
                     .HasPrecision(18, 2);
+                
                 entity.Property(e => e.LastDailyReset)
-                    .HasColumnName("LAST_DAILY_RESET");
+                    .HasColumnName("LAST_DAILY_RESET")
+                    .HasColumnType("DATE");
+                
                 entity.Property(e => e.LastMonthlyReset)
-                    .HasColumnName("LAST_MONTHLY_RESET");
+                    .HasColumnName("LAST_MONTHLY_RESET")
+                    .HasColumnType("DATE");
+                
                 entity.Property(e => e.LastAnnualReset)
-                    .HasColumnName("LAST_ANNUAL_RESET");
+                    .HasColumnName("LAST_ANNUAL_RESET")
+                    .HasColumnType("DATE");
             }
         );
     }

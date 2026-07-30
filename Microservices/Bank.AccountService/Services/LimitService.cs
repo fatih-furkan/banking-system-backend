@@ -60,6 +60,8 @@ public class LimitService
                 return ServiceResult<CreateChargeLimitResponse?>
                     .Failure(Errors.LimitAlreadyExistsError);
             }
+
+            DateTime time = DateTime.UtcNow;
             
             var limit = new ChargeLimit
             {
@@ -74,7 +76,10 @@ public class LimitService
                 CustomerId = createChargeLimitRequest.CustomerId.Value,
                 AnnualLimit = createChargeLimitRequest.AnnualLimit.Value,
                 DailyLimit = createChargeLimitRequest.DailyLimit.Value,
-                MonthlyLimit = createChargeLimitRequest.MonthlyLimit.Value
+                MonthlyLimit = createChargeLimitRequest.MonthlyLimit.Value,
+                LastAnnualReset = time,
+                LastDailyReset = time,
+                LastMonthlyReset = time
             };
             
             _context.ChargeLimits.Add(limit);

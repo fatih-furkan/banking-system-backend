@@ -20,6 +20,11 @@ public class AppDbContext: DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        
+        modelBuilder.HasSequence<long>("ACCOUNT_NO_SEQ")
+            .StartsAt(10000000)
+            .IncrementsBy(1);
+        
         modelBuilder.Entity<Account>(entity =>
             {
                 entity.ToTable("ACCOUNT");
@@ -30,7 +35,8 @@ public class AppDbContext: DbContext
                     .HasColumnName("ACCOUNT_NO")
                     .HasMaxLength(8);
                 entity.Property(e => e.CustomerId)
-                    .HasColumnName("CUSTOMER_ID");
+                    .HasColumnName("CUSTOMER_ID")
+                    .HasPrecision(18);
                 entity.Property(e => e.BranchCode)
                     .HasColumnName("BRANCH_CODE")
                     .HasMaxLength(3);
@@ -38,7 +44,8 @@ public class AppDbContext: DbContext
                     .HasColumnName("STATUS")
                     .HasMaxLength(2);
                 entity.Property(e => e.Balance)
-                    .HasColumnName("BALANCE");
+                    .HasColumnName("BALANCE")
+                    .HasPrecision(18,2);
             }
         );
         
@@ -49,7 +56,9 @@ public class AppDbContext: DbContext
                 entity.HasKey(e => e.CustomerId);
                 
                 entity.Property(e => e.CustomerId)
-                    .HasColumnName("CUSTOMER_ID");
+                    .HasColumnName("CUSTOMER_ID")
+                    .HasPrecision(18)
+                    .ValueGeneratedNever();
                 entity.Property(e => e.DailyLimit)
                     .HasColumnName("DAILY_LIMIT")
                     .HasPrecision(18, 2);
@@ -69,7 +78,9 @@ public class AppDbContext: DbContext
                 entity.HasKey(e => e.CustomerId);
                 
                 entity.Property(e => e.CustomerId)
-                    .HasColumnName("CUSTOMER_ID");
+                    .HasColumnName("CUSTOMER_ID")
+                    .HasPrecision(18)
+                    .ValueGeneratedNever();
                 entity.Property(e => e.DailyLimit)
                     .HasColumnName("DAILY_LIMIT")
                     .HasPrecision(18, 2);
@@ -80,11 +91,14 @@ public class AppDbContext: DbContext
                     .HasColumnName("ANNUAL_LIMIT")
                     .HasPrecision(18, 2);
                 entity.Property(e => e.LastDailyReset)
-                    .HasColumnName("LAST_DAILY_RESET");
+                    .HasColumnName("LAST_DAILY_RESET")
+                    .HasColumnType("DATE");
                 entity.Property(e => e.LastMonthlyReset)
-                    .HasColumnName("LAST_MONTHLY_RESET");
+                    .HasColumnName("LAST_MONTHLY_RESET")
+                    .HasColumnType("DATE");
                 entity.Property(e => e.LastAnnualReset)
-                    .HasColumnName("LAST_ANNUAL_RESET");
+                    .HasColumnName("LAST_ANNUAL_RESET")
+                    .HasColumnType("DATE");
             }
         );
     }

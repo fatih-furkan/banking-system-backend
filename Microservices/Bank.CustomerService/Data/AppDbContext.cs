@@ -13,6 +13,12 @@ public class AppDbContext: DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        
+        
+        modelBuilder.HasSequence<long>("CUSTOMER_ID_SEQ")
+            .StartsAt(1)
+            .IncrementsBy(1);
+        
         modelBuilder.Entity<Customer>(entity =>
             {
                 entity.ToTable("CUSTOMER");
@@ -20,16 +26,22 @@ public class AppDbContext: DbContext
                 entity.HasKey(e => e.CustomerId);
 
                 entity.Property(e => e.CustomerId)
-                    .HasColumnName("CUSTOMER_ID");
+                    .HasColumnName("CUSTOMER_ID")
+                    .HasPrecision(18)
+                    .ValueGeneratedNever();
+                
                 entity.Property(e => e.Name)
                     .HasColumnName("NAME")
                     .HasMaxLength(50);
+                
                 entity.Property(e => e.Surname)
                     .HasColumnName("SURNAME")
                     .HasMaxLength(50);
+                
                 entity.Property(e => e.Status)
                     .HasColumnName("STATUS")
                     .HasMaxLength(2);
+                
                 entity.Property(e => e.Tc)
                     .HasColumnName("TC")
                     .HasMaxLength(11);
