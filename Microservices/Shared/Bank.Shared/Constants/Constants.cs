@@ -93,5 +93,6 @@ public class Constants
         public const string CustomerNotFoundError = "Customer could not be found.";
         public const string AuthorizationCreateError = "Authorization could not be created.";
         public const string AccountSaleCompensationError = "Account sale could not be compensated.";
+        public const string TransactionAlreadyExistsError = "This transaction id already exist.";
     }
 }

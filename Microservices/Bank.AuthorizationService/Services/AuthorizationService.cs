@@ -42,24 +42,35 @@ public class AuthorizationService
     }
 
     public async Task<ServiceResult<CreateAuthorizationResponse>> CreateAuthorizationAsync(
-        CreateAuthorizationRequest createAuthorizationRequest)
+        CreateAuthorizationRequest request)
     {
         Authorization auth = new Authorization
         {
-            Balance = createAuthorizationRequest.Balance,
-            AccountNo = createAuthorizationRequest.AccountNo,
-            CardToken = createAuthorizationRequest.CardToken,
-            ChannelCode = createAuthorizationRequest.ChannelCode,
-            CustomerId = createAuthorizationRequest.CustomerId,
+            Balance = request.Balance,
+            AccountNo = request.AccountNo,
+            CardToken = request.CardToken,
+            ChannelCode = request.ChannelCode,
+            CustomerId = request.CustomerId,
             Guid = Guid.NewGuid().ToString(),
-            Otc = createAuthorizationRequest.Otc,
-            Ots = createAuthorizationRequest.Ots,
-            TransactionAmount = createAuthorizationRequest.TransactionAmount,
+            Otc = request.Otc,
+            Ots = request.Ots,
+            TransactionAmount = request.TransactionAmount,
             TransactionDate = DateTime.UtcNow,
-            TransactionStatus = createAuthorizationRequest.TransactionStatus,
-            TransactionDescription = createAuthorizationRequest.TransactionDescription,
-            TransactionId = createAuthorizationRequest.TransactionId
+            TransactionStatus = request.TransactionStatus,
+            TransactionDescription = request.TransactionDescription,
+            TransactionId = request.TransactionId!.Value
         };
+        
+        bool transactionExists = await _context.Authorizations
+            .AnyAsync(a => a.TransactionId == request.TransactionId);
+
+        if (transactionExists)
+        {
+            return ServiceResult<CreateAuthorizationResponse>.Failure(
+                Errors.TransactionAlreadyExistsError,
+                StatusCodes.Status409Conflict
+            );
+        }
         
         _context.Add(auth);
         await _context.SaveChangesAsync();
@@ -78,7 +89,7 @@ public class AuthorizationService
             TransactionDate = auth.TransactionDate,
             TransactionStatus = auth.TransactionStatus,
             TransactionDescription = auth.TransactionDescription,
-            TransactionId = auth.TransactionId!.Value
+            TransactionId = auth.TransactionId
         };
         return ServiceResult<CreateAuthorizationResponse>.Success(response);
     }

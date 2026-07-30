@@ -28,5 +28,5 @@ public class Authorization
 
     public decimal? TransactionAmount { get; set; }
     
-    public long? TransactionId { get; set; }
+    public long TransactionId { get; set; }
 }

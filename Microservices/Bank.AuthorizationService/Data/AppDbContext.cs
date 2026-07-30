@@ -83,7 +83,11 @@ public class AppDbContext: DbContext
             
             entity.Property(e => e.TransactionId)
                 .HasColumnName("TRXN_ID")
-                .HasPrecision(18, 0);
+                .HasPrecision(18, 0)
+                .IsRequired();
+
+            entity.HasIndex(e => e.TransactionId)
+                .IsUnique();
         });
         
         modelBuilder.Entity<SpendingLimit>(entity =>

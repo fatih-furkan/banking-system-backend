@@ -239,4 +239,9 @@ public static class Errors
         new(
             ErrorCode.AuthorizationCreateErr,
             Constants.ExceptionMessages.AuthorizationCreateError);
+    
+    public static readonly Error TransactionAlreadyExistsError =
+        new(
+            ErrorCode.TransactionAlreadyExistsErr,
+            Constants.ExceptionMessages.TransactionAlreadyExistsError);
 }

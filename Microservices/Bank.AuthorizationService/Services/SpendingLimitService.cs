@@ -130,16 +130,16 @@ public class SpendingLimitService
         return false;
     }
     
-    public async Task<ServiceResult<UseSpendingLimitResponse>> UseSpendingLimitAsync(UseSpendingLimitRequest useSpendingLimitRequest)
+    public async Task<ServiceResult<UseSpendingLimitResponse>> UseSpendingLimitAsync(UseSpendingLimitRequest request)
     {
         
-        if (decimal.Round(useSpendingLimitRequest.Amount.Value, 2) != useSpendingLimitRequest.Amount)
+        if (decimal.Round(request.Amount.Value, 2) != request.Amount)
         {
             return ServiceResult<UseSpendingLimitResponse>.Failure(
                 Errors.PrecisionError, 403);
         }
 
-        if (useSpendingLimitRequest.Amount < 0)
+        if (request.Amount < 0)
         {
             return ServiceResult<UseSpendingLimitResponse>.Failure(
                 Errors.NegativeAmountError, 403);
@@ -149,7 +149,7 @@ public class SpendingLimitService
             from current in _context.CurrentSpendingLimits
             join configured in _context.SpendingLimits
                 on current.CustomerId equals configured.CustomerId
-            where current.CustomerId == useSpendingLimitRequest.CustomerId
+            where current.CustomerId == request.CustomerId
             select new
             {
                 Current = current,
@@ -187,18 +187,24 @@ public class SpendingLimitService
 
         await _context.SaveChangesAsync();
         
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE CURRENT_SPENDING_LIMITS
-             SET DAILY_LIMIT = DAILY_LIMIT - {useSpendingLimitRequest.Amount}, 
-                 MONTHLY_LIMIT = MONTHLY_LIMIT - {useSpendingLimitRequest.Amount},
-                 ANNUAL_LIMIT = ANNUAL_LIMIT - {useSpendingLimitRequest.Amount}
-             WHERE CUSTOMER_ID = {useSpendingLimitRequest.CustomerId} 
-               AND DAILY_LIMIT >= {useSpendingLimitRequest.Amount}
-               AND MONTHLY_LIMIT >= {useSpendingLimitRequest.Amount}
-               AND ANNUAL_LIMIT >= {useSpendingLimitRequest.Amount}
-             """
-        );
+
+        int affectedRows = await _context.CurrentSpendingLimits
+            .Where(limit =>
+                limit.CustomerId == request.CustomerId &&
+                limit.DailyLimit >= request.Amount &&
+                limit.MonthlyLimit >= request.Amount &&
+                limit.AnnualLimit >= request.Amount)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    limit => limit.DailyLimit,
+                    limit => limit.DailyLimit - request.Amount)
+                .SetProperty(
+                    limit => limit.MonthlyLimit,
+                    limit => limit.MonthlyLimit - request.Amount)
+                .SetProperty(
+                    limit => limit.AnnualLimit,
+                    limit => limit.AnnualLimit - request.Amount)
+            );
 
         if (affectedRows == 0)
         {
@@ -208,7 +214,7 @@ public class SpendingLimitService
         var limit = await _context.CurrentSpendingLimits
             .AsNoTracking()
             .FirstOrDefaultAsync
-            (limit => limit.CustomerId == useSpendingLimitRequest.CustomerId);
+            (limit => limit.CustomerId == request.CustomerId);
 
         if (limit != null)
         {
@@ -218,7 +224,7 @@ public class SpendingLimitService
                 NewDailyLimit = limit.DailyLimit,
                 NewMonthlyLimit = limit.MonthlyLimit,
                 NewAnnualLimit = limit.AnnualLimit,
-                TransactionAmount = useSpendingLimitRequest.Amount,
+                TransactionAmount = request.Amount,
                 TransactionTime = DateTime.UtcNow
             };
             
@@ -228,16 +234,16 @@ public class SpendingLimitService
         else return ServiceResult<UseSpendingLimitResponse>.Failure(Errors.AccountNotFoundError);
     }
     
-    public async Task<ServiceResult<CompensateUseSpendingLimitResponse>> CompensateUseSpendingLimitAsync(UseSpendingLimitRequest useSpendingLimitRequest)
+    public async Task<ServiceResult<CompensateUseSpendingLimitResponse>> CompensateUseSpendingLimitAsync(UseSpendingLimitRequest request)
     {
         
-        if (decimal.Round(useSpendingLimitRequest.Amount.Value, 2) != useSpendingLimitRequest.Amount)
+        if (decimal.Round(request.Amount.Value, 2) != request.Amount)
         {
             return ServiceResult<CompensateUseSpendingLimitResponse>.Failure(
                 Errors.PrecisionError, 403);
         }
 
-        if (useSpendingLimitRequest.Amount < 0)
+        if (request.Amount < 0)
         {
             return ServiceResult<CompensateUseSpendingLimitResponse>.Failure(
                 Errors.NegativeAmountError, 403);
@@ -245,16 +251,21 @@ public class SpendingLimitService
 
         await _context.SaveChangesAsync();
         
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE CURRENT_SPENDING_LIMITS
-             SET DAILY_LIMIT = DAILY_LIMIT + {useSpendingLimitRequest.Amount}, 
-                 MONTHLY_LIMIT = MONTHLY_LIMIT + {useSpendingLimitRequest.Amount},
-                 ANNUAL_LIMIT = ANNUAL_LIMIT + {useSpendingLimitRequest.Amount}
-             WHERE CUSTOMER_ID = {useSpendingLimitRequest.CustomerId} 
-             """
-        );
-
+        int affectedRows = await _context.CurrentSpendingLimits
+            .Where(limit =>
+                limit.CustomerId == request.CustomerId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    limit => limit.DailyLimit,
+                    limit => limit.DailyLimit + request.Amount)
+                .SetProperty(
+                    limit => limit.MonthlyLimit,
+                    limit => limit.MonthlyLimit + request.Amount)
+                .SetProperty(
+                    limit => limit.AnnualLimit,
+                    limit => limit.AnnualLimit + request.Amount)
+            );
+        
         if (affectedRows == 0)
         {
             return ServiceResult<CompensateUseSpendingLimitResponse>.Failure(Errors.CustomerNotExistError);
@@ -263,14 +274,14 @@ public class SpendingLimitService
         var limit = await _context.CurrentSpendingLimits
             .AsNoTracking()
             .FirstOrDefaultAsync
-            (limit => limit.CustomerId == useSpendingLimitRequest.CustomerId);
+            (limit => limit.CustomerId == request.CustomerId);
 
         if (limit != null)
         {
             var response = new CompensateUseSpendingLimitResponse
             {
                 CustomerId = limit.CustomerId,
-                TransactionAmount = useSpendingLimitRequest.Amount,
+                TransactionAmount = request.Amount,
                 TransactionTime = DateTime.UtcNow
             };
             

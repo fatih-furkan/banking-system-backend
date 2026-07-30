@@ -160,16 +160,16 @@ public class LimitService
         return false;
     }
     
-    public async Task<ServiceResult<UseChargeLimitResponse>> UseChargeLimitAsync(UseChargeLimitRequest useChargeLimitRequest)
+    public async Task<ServiceResult<UseChargeLimitResponse>> UseChargeLimitAsync(UseChargeLimitRequest request)
     {
         
-        if (decimal.Round(useChargeLimitRequest.Amount.Value, 2) != useChargeLimitRequest.Amount)
+        if (decimal.Round(request.Amount.Value, 2) != request.Amount)
         {
             return ServiceResult<UseChargeLimitResponse>.Failure(
                 Errors.PrecisionError, 403);
         }
 
-        if (useChargeLimitRequest.Amount < 0)
+        if (request.Amount < 0)
         {
             return ServiceResult<UseChargeLimitResponse>.Failure(
                 Errors.NegativeAmountError, 403);
@@ -179,7 +179,7 @@ public class LimitService
             from current in _context.CurrentChargeLimits
             join configured in _context.ChargeLimits
                 on current.CustomerId equals configured.CustomerId
-            where current.CustomerId == useChargeLimitRequest.CustomerId
+            where current.CustomerId == request.CustomerId
             select new
             {
                 Current = current,
@@ -217,18 +217,23 @@ public class LimitService
 
         await _context.SaveChangesAsync();
         
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE CURRENT_CHARGE_LIMITS
-             SET DAILY_LIMIT = DAILY_LIMIT - {useChargeLimitRequest.Amount}, 
-                 MONTHLY_LIMIT = MONTHLY_LIMIT - {useChargeLimitRequest.Amount},
-                 ANNUAL_LIMIT = ANNUAL_LIMIT - {useChargeLimitRequest.Amount}
-             WHERE CUSTOMER_ID = {useChargeLimitRequest.CustomerId} 
-               AND DAILY_LIMIT >= {useChargeLimitRequest.Amount}
-               AND MONTHLY_LIMIT >= {useChargeLimitRequest.Amount}
-               AND ANNUAL_LIMIT >= {useChargeLimitRequest.Amount}
-             """
-        );
+        int affectedRows = await _context.CurrentChargeLimits
+            .Where(limit =>
+                limit.CustomerId == request.CustomerId &&
+                limit.DailyLimit >= request.Amount &&
+                limit.MonthlyLimit >= request.Amount &&
+                limit.AnnualLimit >= request.Amount)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    limit => limit.DailyLimit,
+                    limit => limit.DailyLimit - request.Amount)
+                .SetProperty(
+                    limit => limit.MonthlyLimit,
+                    limit => limit.MonthlyLimit - request.Amount)
+                .SetProperty(
+                    limit => limit.AnnualLimit,
+                    limit => limit.AnnualLimit - request.Amount)
+            );
 
         if (affectedRows == 0)
         {
@@ -238,7 +243,7 @@ public class LimitService
         var limit = await _context.CurrentChargeLimits
             .AsNoTracking()
             .FirstOrDefaultAsync
-            (limit => limit.CustomerId == useChargeLimitRequest.CustomerId);
+            (limit => limit.CustomerId == request.CustomerId);
 
         if (limit != null)
         {
@@ -248,7 +253,7 @@ public class LimitService
                 NewDailyLimit = limit.DailyLimit,
                 NewMonthlyLimit = limit.MonthlyLimit,
                 NewAnnualLimit = limit.AnnualLimit,
-                TransactionAmount = useChargeLimitRequest.Amount,
+                TransactionAmount = request.Amount,
                 TransactionTime = DateTime.UtcNow
             };
             
@@ -258,16 +263,16 @@ public class LimitService
         else return ServiceResult<UseChargeLimitResponse>.Failure(Errors.AccountNotFoundError);
     }
     
-    public async Task<ServiceResult<CompensateUseChargeLimitResponse>> CompensateUseChargeLimitAsync(UseChargeLimitRequest useChargeLimitRequest)
+    public async Task<ServiceResult<CompensateUseChargeLimitResponse>> CompensateUseChargeLimitAsync(UseChargeLimitRequest request)
     {
         
-        if (decimal.Round(useChargeLimitRequest.Amount.Value, 2) != useChargeLimitRequest.Amount)
+        if (decimal.Round(request.Amount.Value, 2) != request.Amount)
         {
             return ServiceResult<CompensateUseChargeLimitResponse>.Failure(
                 Errors.PrecisionError, 403);
         }
 
-        if (useChargeLimitRequest.Amount < 0)
+        if (request.Amount < 0)
         {
             return ServiceResult<CompensateUseChargeLimitResponse>.Failure(
                 Errors.NegativeAmountError, 403);
@@ -275,15 +280,20 @@ public class LimitService
 
         await _context.SaveChangesAsync();
         
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE CURRENT_CHARGE_LIMITS
-             SET DAILY_LIMIT = DAILY_LIMIT + {useChargeLimitRequest.Amount}, 
-                 MONTHLY_LIMIT = MONTHLY_LIMIT + {useChargeLimitRequest.Amount},
-                 ANNUAL_LIMIT = ANNUAL_LIMIT + {useChargeLimitRequest.Amount}
-             WHERE CUSTOMER_ID = {useChargeLimitRequest.CustomerId} 
-             """
-        );
+        int affectedRows = await _context.CurrentChargeLimits
+            .Where(limit =>
+                limit.CustomerId == request.CustomerId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    limit => limit.DailyLimit,
+                    limit => limit.DailyLimit + request.Amount)
+                .SetProperty(
+                    limit => limit.MonthlyLimit,
+                    limit => limit.MonthlyLimit + request.Amount)
+                .SetProperty(
+                    limit => limit.AnnualLimit,
+                    limit => limit.AnnualLimit + request.Amount)
+            );
 
         if (affectedRows == 0)
         {
@@ -293,14 +303,14 @@ public class LimitService
         var limit = await _context.CurrentChargeLimits
             .AsNoTracking()
             .FirstOrDefaultAsync
-            (limit => limit.CustomerId == useChargeLimitRequest.CustomerId);
+            (limit => limit.CustomerId == request.CustomerId);
 
         if (limit != null)
         {
             var response = new CompensateUseChargeLimitResponse
             {
                 CustomerId = limit.CustomerId,
-                TransactionAmount = useChargeLimitRequest.Amount,
+                TransactionAmount = request.Amount,
                 TransactionTime = DateTime.UtcNow
             };
             

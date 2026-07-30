@@ -48,5 +48,6 @@ public enum ErrorCode
     AccountSaleErr,
     LimitAlreadyExistsErr,
     CustomerNotFoundErr,
-    AuthorizationCreateErr
+    AuthorizationCreateErr,
+    TransactionAlreadyExistsErr
 }

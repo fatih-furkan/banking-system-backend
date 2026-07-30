@@ -101,7 +101,7 @@ public class AccountService
             );
         }
 
-        decimal amount = request.Amount.Value;
+        decimal amount = request.Amount!.Value;
 
         if (decimal.Round(amount, 2) != amount)
         {
@@ -119,12 +119,12 @@ public class AccountService
             );
         }
 
-        var account = await _context.Accounts
+        var theAccount = await _context.Accounts
             .FirstOrDefaultAsync(
                 account => account.AccountNo == request.AccountNo
             );
 
-        if (account is null)
+        if (theAccount is null)
         {
             return ServiceResult<DepositResponse>.Failure(
                 Errors.AccountNotFoundError,
@@ -135,8 +135,8 @@ public class AccountService
         var limitRequest = new UseChargeLimitRequest
         {
             Amount = amount,
-            ChannelCode = request.ChannelCode.Value,
-            CustomerId = account.CustomerId
+            ChannelCode = request.ChannelCode!.Value,
+            CustomerId = theAccount.CustomerId
         };
 
         bool limitUsed = false;
@@ -158,15 +158,14 @@ public class AccountService
             }
 
             limitUsed = true;
-            
+
             int affectedRows =
-                await _context.Database.ExecuteSqlInterpolatedAsync(
-                    $"""
-                    UPDATE ACCOUNT
-                    SET BALANCE = BALANCE + {amount}
-                    WHERE ACCOUNT_NO = {request.AccountNo}
-                    """
-                );
+                await _context.Accounts
+                    .Where(account => account.AccountNo == request.AccountNo)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(account => account.Balance,
+                            account => account.Balance + request.Amount)
+                    );
 
             if (affectedRows == 0)
             {
@@ -178,16 +177,16 @@ public class AccountService
 
             depositMade = true;
 
-            await _context.Entry(account)
+            await _context.Entry(theAccount)
                 .ReloadAsync();
 
             var authorizationRequest = new CreateAuthorizationRequest
             {
-                AccountNo = account.AccountNo,
-                Balance = account.Balance,
+                AccountNo = theAccount.AccountNo,
+                Balance = theAccount.Balance,
                 CardToken = null,
                 ChannelCode = request.ChannelCode.Value,
-                CustomerId = account.CustomerId,
+                CustomerId = theAccount.CustomerId,
                 Otc = Constants.Otcs.Deposit,
                 Ots = request.ChannelCode == ChannelCode.Branch
                     ? Constants.Ots.DepositOts.BranchDeposit
@@ -210,7 +209,8 @@ public class AccountService
                 {
                     TransactionAmount = authorization.TransactionAmount,
                     Balance = authorization.Balance,
-                    TransactionTime = authorization.TransactionDate
+                    TransactionTime = authorization.TransactionDate,
+                    TransactionId = request.TransactionId!.Value
                 }
             );
         }
@@ -256,12 +256,12 @@ public class AccountService
             );
         }
 
-        var account = await _context.Accounts
+        var theAccount = await _context.Accounts
             .FirstOrDefaultAsync(
                 account => account.AccountNo == request.AccountNo
             );
 
-        if (account is null)
+        if (theAccount is null)
         {
             return ServiceResult<WithdrawResponse>.Failure(
                 Errors.AccountNotFoundError,
@@ -275,14 +275,12 @@ public class AccountService
         try
         {
             int affectedRows =
-                await _context.Database.ExecuteSqlInterpolatedAsync(
-                    $"""
-                    UPDATE ACCOUNT
-                    SET BALANCE = BALANCE - {amount}
-                    WHERE ACCOUNT_NO = {request.AccountNo}
-                      AND BALANCE >= {amount}
-                    """
-                );
+                await _context.Accounts
+                    .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(account => account.Balance,
+                            account => account.Balance - request.Amount)
+                    );
 
             if (affectedRows == 0)
             {
@@ -293,17 +291,17 @@ public class AccountService
 
             withdrawalMade = true;
 
-            // account was loaded before the raw SQL update,
+            // account was loaded before the SQL update,
             // so refresh its Balance from the database.
-            await _context.Entry(account).ReloadAsync();
+            await _context.Entry(theAccount).ReloadAsync();
 
             var authorizationRequest = new CreateAuthorizationRequest
             {
-                AccountNo = account.AccountNo,
-                Balance = account.Balance,
+                AccountNo = theAccount.AccountNo,
+                Balance = theAccount.Balance,
                 CardToken = null,
                 ChannelCode = request.ChannelCode,
-                CustomerId = account.CustomerId,
+                CustomerId = theAccount.CustomerId,
                 Otc = Constants.Otcs.Withdrawal,
                 Ots = Constants.Ots.WithdrawalOts.CashWithdrawal,
                 TransactionAmount = amount,
@@ -371,12 +369,12 @@ public class AccountService
         );
     }
 
-    var account = await _context.Accounts
+    var theAccount = await _context.Accounts
         .FirstOrDefaultAsync(
             account => account.AccountNo == request.AccountNo
         );
 
-    if (account is null)
+    if (theAccount is null)
     {
         return ServiceResult<WithdrawResponse>.Failure(
             Errors.AccountNotFoundError,
@@ -390,14 +388,12 @@ public class AccountService
     try
     {
         int affectedRows =
-            await _context.Database.ExecuteSqlInterpolatedAsync(
-                $"""
-                UPDATE ACCOUNT
-                SET BALANCE = BALANCE - {amount}
-                WHERE ACCOUNT_NO = {request.AccountNo}
-                  AND BALANCE >= {amount}
-                """
-            );
+            await _context.Accounts
+                .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(account => account.Balance,
+                        account => account.Balance - request.Amount)
+                );
 
         if (affectedRows == 0)
         {
@@ -410,15 +406,15 @@ public class AccountService
 
         // account was loaded before the raw SQL update,
         // so refresh its Balance from the database.
-        await _context.Entry(account).ReloadAsync();
+        await _context.Entry(theAccount).ReloadAsync();
 
         var authorizationRequest = new CreateAuthorizationRequest
         {
-            AccountNo = account.AccountNo,
-            Balance = account.Balance,
+            AccountNo = theAccount.AccountNo,
+            Balance = theAccount.Balance,
             CardToken = null,
             ChannelCode = request.ChannelCode,
-            CustomerId = account.CustomerId,
+            CustomerId = theAccount.CustomerId,
             Otc = Constants.Otcs.Withdrawal,
             Ots = Constants.Ots.WithdrawalOts.FastWihtdrawal,
             TransactionAmount = amount,
@@ -497,13 +493,13 @@ public class AccountService
     //should be called from authorization
     public async Task<ServiceResult<SaleResponse>> SaleAsync(SaleRequest request)
     {
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE ACCOUNT
-             SET BALANCE = BALANCE - {request.Amount}
-             WHERE ACCOUNT_NO = {request.AccountNo} AND BALANCE >= {request.Amount}
-             """
-        );
+        int affectedRows =
+            await _context.Accounts
+                .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(account => account.Balance,
+                        account => account.Balance - request.Amount)
+                );
 
         if (affectedRows == 0)
         {
@@ -566,7 +562,7 @@ public class AccountService
                 if (!result.IsSuccess)
                 {
                     _logger.LogError(
-                        "Authorization compensation failed. Guid: {Guid}",
+                        "Authorization compensation is failed. Guid: {Guid}",
                         authorizationGuid
                     );
                 }
@@ -586,15 +582,12 @@ public class AccountService
             try
             {
                 int affectedRows =
-                    await _context.Database.ExecuteSqlInterpolatedAsync(
-                        $"""
-                        UPDATE ACCOUNT
-                        SET BALANCE = BALANCE - {amount}
-                        WHERE ACCOUNT_NO = {accountNo}
-                        """,
-                        CancellationToken.None
-                    );
-
+                    await _context.Accounts
+                        .Where(account => account.AccountNo == accountNo)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(account => account.Balance,
+                                account => account.Balance - amount)
+                        );
                 if (affectedRows == 0)
                 {
                     _logger.LogError(
@@ -636,7 +629,7 @@ public class AccountService
         string accountNo,
         decimal amount,
         string? authorizationGuid,
-        bool depositMade
+        bool withdrawMade
         )
     {
         // Reverse order of completed operations.
@@ -668,19 +661,17 @@ public class AccountService
             }
         }
 
-        if (depositMade)
+        if (withdrawMade)
         {
             try
             {
                 int affectedRows =
-                    await _context.Database.ExecuteSqlInterpolatedAsync(
-                        $"""
-                        UPDATE ACCOUNT
-                        SET BALANCE = BALANCE + {amount}
-                        WHERE ACCOUNT_NO = {accountNo}
-                        """,
-                        CancellationToken.None
-                    );
+                    await _context.Accounts
+                        .Where(account => account.AccountNo == accountNo)
+                        .ExecuteUpdateAsync(setters => setters
+                            .SetProperty(account => account.Balance,
+                                account => account.Balance + amount)
+                        );
 
                 if (affectedRows == 0)
                 {
@@ -703,13 +694,13 @@ public class AccountService
 
     public async Task<ServiceResult<Unit>> CompensateSaleAsync(SaleRequest request)
     {
-        int affectedRows = await _context.Database.ExecuteSqlInterpolatedAsync(
-            $"""
-             UPDATE ACCOUNT
-             SET BALANCE = BALANCE + {request.Amount}
-             WHERE ACCOUNT_NO = {request.AccountNo}
-             """
-        );
+        int affectedRows =
+            await _context.Accounts
+                .Where(account => account.AccountNo == request.AccountNo)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(account => account.Balance,
+                        account => account.Balance + request.Amount)
+                );
 
         if (affectedRows == 0)
         {
