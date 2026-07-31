@@ -169,7 +169,7 @@ public class AuthorizationService
     public async Task<ServiceResult<SaleResponse>> SaleAsync(
     SaleRequest request)
     {
-        decimal amount = request.Amount.Value;
+        decimal amount = request.Amount!.Value;
 
         if (decimal.Round(amount, 2) != amount)
         {
@@ -344,7 +344,7 @@ public class AuthorizationService
     bool accountSaleMade,
     bool spendingLimitUsed)
     {
-        // 1. Compensate authorization first.
+        // 1. Compensate authorization first
         if (authorizationGuid is not null)
         {
             try
@@ -382,7 +382,7 @@ public class AuthorizationService
             }
         }
 
-        // 2. Refund the amount deducted by AccountService.
+        // 2. Refund the amount deducted by AccountService
         if (accountSaleMade)
         {
             try
@@ -421,7 +421,7 @@ public class AuthorizationService
             }
         }
 
-        // 3. Restore the spending limit.
+        // 3. Restore the spending limit
         if (spendingLimitUsed)
         {
             try

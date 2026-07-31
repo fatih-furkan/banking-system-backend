@@ -269,12 +269,36 @@ public class AccountService
                 StatusCodes.Status404NotFound
             );
         }
+        
+        var limitRequest = new UseChargeLimitRequest
+        {
+            Amount = amount,
+            ChannelCode = request.ChannelCode!.Value,
+            CustomerId = theAccount.CustomerId
+        };
+        
 
         bool withdrawalMade = false;
         string? authorizationGuid = null;
-
+        bool limitUsed = false;
+        
         try
         {
+            
+            var limitResult = await _chargeLimitSaga.ExecuteAsync(
+                limitRequest
+            );
+
+            if (!limitResult.IsSuccess)
+            {
+                return ServiceResult<WithdrawResponse>.Failure(
+                    limitResult.Error ?? Errors.InsufficientLimitError,
+                    limitResult.StatusCode
+                );
+            }
+
+            limitUsed = true;
+            
             int affectedRows =
                 await _context.Accounts
                     .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
@@ -341,8 +365,10 @@ public class AccountService
             await CompensateWithdrawAsync(
                 request.AccountNo,
                 amount,
+                limitRequest,
                 authorizationGuid,
-                withdrawalMade
+                withdrawalMade,
+                limitUsed
             );
 
             throw;
@@ -383,11 +409,35 @@ public class AccountService
         );
     }
 
+    var limitRequest = new UseChargeLimitRequest
+    {
+        Amount = amount,
+        ChannelCode = request.ChannelCode!.Value,
+        CustomerId = theAccount.CustomerId
+    };
+        
+
     bool withdrawalMade = false;
     string? authorizationGuid = null;
-
+    bool limitUsed = false;
+        
     try
     {
+            
+        var limitResult = await _chargeLimitSaga.ExecuteAsync(
+            limitRequest
+        );
+
+        if (!limitResult.IsSuccess)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(
+                limitResult.Error ?? Errors.InsufficientLimitError,
+                limitResult.StatusCode
+            );
+        }
+
+        limitUsed = true;
+        
         int affectedRows =
             await _context.Accounts
                 .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
@@ -454,8 +504,10 @@ public class AccountService
         await CompensateWithdrawAsync(
             request.AccountNo,
             amount,
+            limitRequest,
             authorizationGuid,
-            withdrawalMade
+            withdrawalMade,
+            limitUsed
         );
 
         throw;
@@ -633,8 +685,10 @@ public class AccountService
     private async Task CompensateWithdrawAsync(
         string accountNo,
         decimal amount,
+        UseChargeLimitRequest limitRequest,
         string? authorizationGuid,
-        bool withdrawMade
+        bool withdrawMade,
+        bool limitUsed
         )
     {
         // Reverse order of completed operations.
@@ -692,6 +746,24 @@ public class AccountService
                     exception,
                     "Deposit compensation threw an exception. AccountNo: {AccountNo}",
                     accountNo
+                );
+            }
+        }
+        
+        if (limitUsed)
+        {
+            try
+            {
+                await _chargeLimitSaga.CompensateAsync(
+                    limitRequest
+                );
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Limit compensation failed. CustomerId: {CustomerId}",
+                    limitRequest.CustomerId
                 );
             }
         }
