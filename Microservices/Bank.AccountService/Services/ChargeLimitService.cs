@@ -8,12 +8,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Bank.AccountService.Services;
 
-public class LimitService
+public class ChargeLimitService
 {
     private readonly AppDbContext _context;
     private readonly CustomerClient _customerClient;
 
-    public LimitService(AppDbContext appDbContext, CustomerClient customerClient)
+    public ChargeLimitService(AppDbContext appDbContext, CustomerClient customerClient)
     {
         _context = appDbContext;
         _customerClient = customerClient;

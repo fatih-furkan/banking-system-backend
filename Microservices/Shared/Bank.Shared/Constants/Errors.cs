@@ -244,4 +244,19 @@ public static class Errors
         new(
             ErrorCode.TransactionAlreadyExistsErr,
             Constants.ExceptionMessages.TransactionAlreadyExistsError);
+    
+    public static readonly Error AccountClientError =
+        new(
+            ErrorCode.AccountClientErr,
+            Constants.ExceptionMessages.AccountClientError);
+    
+    public static readonly Error CardNotFoundError =
+        new(
+            ErrorCode.CardNotFoundErr,
+            Constants.ExceptionMessages.CardNotFoundError);
+    
+    public static readonly Error CustomerClientError =
+        new(
+            ErrorCode.CustomerClientErr,
+            Constants.ExceptionMessages.CustomerClientError);
 }

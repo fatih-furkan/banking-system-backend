@@ -79,7 +79,8 @@ public class AccountService
 
     public async Task<bool> DeleteAccountAsync(string accountNo)
     {
-        var account = await _context.Accounts.FirstOrDefaultAsync(account => account.AccountNo == accountNo);
+        var account = await _context.Accounts
+            .FirstOrDefaultAsync(account => account.AccountNo == accountNo);
         if (account != null)
         {
             _context.Accounts.Remove(account);
@@ -485,9 +486,13 @@ public class AccountService
         return ServiceResult<Unit>.Success(new Unit());
     }
     
-    public async Task<bool> CheckExistenceByAccountNoAsync(string accountNo)
+    public async Task<ServiceResult<bool>> CheckExistenceByAccountNoAsync(
+        string accountNo)
     {
-        return await _context.Accounts.AnyAsync(account => account.AccountNo == accountNo);
+        bool exists = await _context.Accounts
+            .AnyAsync(account => account.AccountNo == accountNo);
+
+        return ServiceResult<bool>.Success(exists);
     }
 
     //should be called from authorization

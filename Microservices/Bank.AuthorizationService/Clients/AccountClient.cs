@@ -130,4 +130,26 @@ public class AccountClient
 
         return ServiceResult<long?>.Success(result.CustomerId);
     }
+    
+    public async Task<ServiceResult<bool>> AccountExistsAsync(
+        string accountNo)
+    {
+        string encodedAccountNo = Uri.EscapeDataString(accountNo);
+
+        using var response = await _httpClient.GetAsync(
+            $"/api/account/{encodedAccountNo}/exists"
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return ServiceResult<bool>.Failure(
+                Errors.AccountClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        bool exists = await response.Content.ReadFromJsonAsync<bool>();
+
+        return ServiceResult<bool>.Success(exists);
+    }
 }

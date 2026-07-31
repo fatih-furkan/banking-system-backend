@@ -108,10 +108,21 @@ public class AccountController: ControllerBase
     }
     
     [HttpGet("{accountNo}/exists")]
-    public async Task<ActionResult<bool>> Exists(string accountNo)
+    public async Task<IActionResult> CheckExistenceByAccountNo(
+        string accountNo)
     {
-        bool exists = await _accountService.CheckExistenceByAccountNoAsync(accountNo);
-        return Ok(exists);
+        var result =
+            await _accountService.CheckExistenceByAccountNoAsync(accountNo);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                result.StatusCode,
+                new ErrorResponse(result.Error)
+            );
+        }
+
+        return Ok(result.Data);
     }
 
     [HttpPost("sale")]

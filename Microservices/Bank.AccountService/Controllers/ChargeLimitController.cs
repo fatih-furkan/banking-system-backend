@@ -10,24 +10,24 @@ namespace Bank.AccountService.Controllers;
 [Route("api/charge-limit")]
 public class ChargeLimitController : Controller
 {
-    private readonly LimitService _limitService;
+    private readonly ChargeLimitService _chargeLimitService;
 
-    public ChargeLimitController(LimitService limitService)
+    public ChargeLimitController(ChargeLimitService chargeLimitService)
     {
-        _limitService = limitService;
+        _chargeLimitService = chargeLimitService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
-        var limits = await _limitService.GetAllChargeLimitsAsync();
+        var limits = await _chargeLimitService.GetAllChargeLimitsAsync();
         return Ok(limits);
     }
 
     [HttpGet("{customerId:long}")]
     public async Task<IActionResult> GetByAccountNo(long customerId)
     {
-        var limit = await _limitService.GetChargeLimitByCustomerIdAsync(customerId);
+        var limit = await _chargeLimitService.GetChargeLimitByCustomerIdAsync(customerId);
         if (limit == null)
         {
             return NotFound(new ErrorResponse(Errors.LimitNotFoundError));
@@ -38,14 +38,14 @@ public class ChargeLimitController : Controller
     [HttpGet("current")]
     public async Task<IActionResult> GetAllCurrent()
     {
-        var limits = await _limitService.GetAllCurrentChargeLimitsAsync();
+        var limits = await _chargeLimitService.GetAllCurrentChargeLimitsAsync();
         return Ok(limits);
     }
 
     [HttpGet("current/{customerId:long}")]
     public async Task<IActionResult> GetCurrentByAccountNo(long customerId)
     {
-        var limit = await _limitService.GetCurrentChargeLimitByCustomerIdAsync(customerId);
+        var limit = await _chargeLimitService.GetCurrentChargeLimitByCustomerIdAsync(customerId);
         if (limit == null)
         {
             return NotFound(new ErrorResponse(Errors.LimitNotFoundError));
@@ -56,7 +56,7 @@ public class ChargeLimitController : Controller
     [HttpPost]
     public async Task<IActionResult> AddChargeLimit(CreateChargeLimitRequest request)
     {
-        var result = await _limitService.AddChargeLimitAsync(request);
+        var result = await _chargeLimitService.AddChargeLimitAsync(request);
         if (result.Data == null)
         {
             return StatusCode(403, new ErrorResponse(result.Error));
@@ -68,7 +68,7 @@ public class ChargeLimitController : Controller
     [HttpPost("current/")]
     public async Task<IActionResult> AddCurrentChargeLimit(CreateCurrentChargeLimitRequest request)
     {
-        var result = await _limitService.AddCurrentChargeLimitAsync(request);
+        var result = await _chargeLimitService.AddCurrentChargeLimitAsync(request);
         if (result.Data == null)
         {
             return StatusCode(403, new ErrorResponse(result.Error));
@@ -80,7 +80,7 @@ public class ChargeLimitController : Controller
     [HttpDelete("{customerId:long}")]
     public async Task<IActionResult> DeleteChargeLimit(long customerId)
     {
-        var result = await _limitService.DeleteChargeLimitAsync(customerId);
+        var result = await _chargeLimitService.DeleteChargeLimitAsync(customerId);
         if (result == false)
         {
             return StatusCode(403);
@@ -91,7 +91,7 @@ public class ChargeLimitController : Controller
     [HttpDelete("current/{customerId:long}")]
     public async Task<IActionResult> DeleteCurrentChargeLimit(long customerId)
     {
-        var result = await _limitService.DeleteCurrentChargeLimitAsync(customerId);
+        var result = await _chargeLimitService.DeleteCurrentChargeLimitAsync(customerId);
         if (result == false)
         {
             return StatusCode(403);
@@ -102,7 +102,7 @@ public class ChargeLimitController : Controller
     [HttpPost("use-charge-limit")]
     public async Task<IActionResult> UseChargeLimit(UseChargeLimitRequest useChargeLimitRequest)
     {
-        var result = await _limitService.UseChargeLimitAsync(useChargeLimitRequest);
+        var result = await _chargeLimitService.UseChargeLimitAsync(useChargeLimitRequest);
         if (!result.IsSuccess)
         {
             return StatusCode(result.StatusCode, new ErrorResponse(result.Error));
@@ -114,7 +114,7 @@ public class ChargeLimitController : Controller
     [HttpPost("compensate-use-charge-limit")]
     public async Task<IActionResult> CompensateUseChargeLimit(UseChargeLimitRequest useChargeLimitRequest)
     {
-        var result = await _limitService.CompensateUseChargeLimitAsync(useChargeLimitRequest);
+        var result = await _chargeLimitService.CompensateUseChargeLimitAsync(useChargeLimitRequest);
         if (!result.IsSuccess)
         {
             return StatusCode(result.StatusCode, new ErrorResponse(result.Error));

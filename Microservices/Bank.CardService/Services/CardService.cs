@@ -42,9 +42,12 @@ public class CardService
         return await _context.Cards.FindAsync(cardToken);
     }
     
-    public async Task<bool> CheckExistenceByCardTokenAsync(string cardToken)
+    public async Task<ServiceResult<bool>> CheckExistenceByCardTokenAsync(string cardToken)
     {
-        return await _context.Cards.AnyAsync(card => card.CardToken == cardToken);
+        bool exists = await _context.Cards
+            .AnyAsync(card => card.CardToken == cardToken);
+
+        return ServiceResult<bool>.Success(exists);
     }
 
     public async Task<bool> CardBelongsToCustomer(string cardToken, long customerId)
@@ -54,7 +57,7 @@ public class CardService
     
     public async Task<bool> DeleteCard(string cardToken)
     {
-        var card = await _context.Cards.FirstOrDefaultAsync();
+        var card = await _context.Cards.FirstOrDefaultAsync(card => card.CardToken == cardToken);
         if (card != null)
         {
             _context.Cards.Remove(card);

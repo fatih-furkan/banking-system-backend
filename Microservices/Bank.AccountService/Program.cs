@@ -30,7 +30,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<ChargeLimitSaga>();
-builder.Services.AddScoped<LimitService>();
+builder.Services.AddScoped<ChargeLimitService>();
 
 builder.Services.AddHttpClient<CustomerClient>(client =>
 {

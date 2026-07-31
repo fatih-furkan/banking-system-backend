@@ -52,11 +52,30 @@ public class AccountClient
         return ServiceResult<CreateAccountResponse>.Success(result);
     }
     
-    public async Task<bool> AccountExistsAsync(string accountNo)
+    public async Task<ServiceResult<bool>> AccountExistsAsync(
+        string accountNo,
+        CancellationToken cancellationToken = default)
     {
-        return await _httpClient.GetFromJsonAsync<bool>(
-            $"/api/account/{accountNo}/exists"
+        string encodedAccountNo = Uri.EscapeDataString(accountNo);
+
+        using var response = await _httpClient.GetAsync(
+            $"/api/account/{encodedAccountNo}/exists",
+            cancellationToken
         );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return ServiceResult<bool>.Failure(
+                Errors.GetAccountError,
+                (int)response.StatusCode
+            );
+        }
+
+        bool exists = await response.Content.ReadFromJsonAsync<bool>(
+            cancellationToken: cancellationToken
+        );
+
+        return ServiceResult<bool>.Success(exists);
     }
 
     public async Task AssignStatusAsync(string accountNo, string status)

@@ -49,5 +49,8 @@ public enum ErrorCode
     LimitAlreadyExistsErr,
     CustomerNotFoundErr,
     AuthorizationCreateErr,
-    TransactionAlreadyExistsErr
+    TransactionAlreadyExistsErr,
+    AccountClientErr,
+    CardNotFoundErr,
+    CustomerClientErr
 }

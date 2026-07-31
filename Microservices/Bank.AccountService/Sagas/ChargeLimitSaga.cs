@@ -8,21 +8,21 @@ namespace Bank.AccountService.Sagas;
 public class ChargeLimitSaga
 {
     private readonly ILogger<ChargeLimitSaga> _logger;
-    private readonly LimitService _limitService;
+    private readonly ChargeLimitService _chargeLimitService;
     
     public ChargeLimitSaga(
         ILogger<ChargeLimitSaga> logger,
-        LimitService limitService)
+        ChargeLimitService chargeLimitService)
     {
         _logger = logger;
-        _limitService = limitService;
+        _chargeLimitService = chargeLimitService;
     }
     
     public async Task<ServiceResult<UseChargeLimitResponse>> ExecuteAsync(
         UseChargeLimitRequest request)
     {
         
-        var useChargeLimitResult = await _limitService
+        var useChargeLimitResult = await _chargeLimitService
             .UseChargeLimitAsync(request);
         if (!useChargeLimitResult.IsSuccess || useChargeLimitResult.Data == null)
         {
@@ -37,7 +37,7 @@ public class ChargeLimitSaga
     {
         try
         {
-            await _limitService.CompensateUseChargeLimitAsync(
+            await _chargeLimitService.CompensateUseChargeLimitAsync(
                 request
             );
         }

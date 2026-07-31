@@ -64,9 +64,9 @@ public class CustomerService
             var createChargeLimitResult = await _accountClient.CreateChargeLimitAsync(
                 new CreateChargeLimitRequest
                 {
-                    AnnualLimit = 1000000, //todo bu degerler nereye konmali
-                    MonthlyLimit = 100000,
-                    DailyLimit = 10000,
+                    AnnualLimit = Constants.Limits.AnnualChargeLimit,
+                    MonthlyLimit = Constants.Limits.MonthlyChargeLimit,
+                    DailyLimit = Constants.Limits.DailyChargeLimit,
                     CustomerId = customerId
                 });
 
@@ -79,9 +79,9 @@ public class CustomerService
             var createSpendingLimitResult = await _authorizationClient.AddSpendingLimitAsync(
                 new CreateSpendingLimitRequest
                 {
-                    AnnualLimit = 2000000, //todo bu degerler nereye konmali
-                    MonthlyLimit = 200000,
-                    DailyLimit = 20000,
+                    AnnualLimit = Constants.Limits.AnnualSpendingLimit,
+                    MonthlyLimit = Constants.Limits.MonthlySpendingLimit,
+                    DailyLimit = Constants.Limits.DailySpendingLimit,
                     CustomerId = customerId
                 });
 

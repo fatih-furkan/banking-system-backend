@@ -17,6 +17,7 @@ public class AuthorizationService
     private readonly AppDbContext _context;
     private readonly CardClient _cardClient;
     private readonly AccountClient _accountClient;
+    private readonly CustomerClient _customerClient;
     private readonly SpendingLimitSaga _spendingLimitSaga;
     private readonly AccountSaleSaga _accountSaleSaga;
     private readonly ILogger<AuthorizationService> _logger;
@@ -26,11 +27,13 @@ public class AuthorizationService
         AccountClient accountClient,
         SpendingLimitSaga spendingLimitSaga,
         AccountSaleSaga accountSaleSaga,
-        ILogger<AuthorizationService> logger)
+        ILogger<AuthorizationService> logger,
+        CustomerClient customerClient)
     {
         _context = context;
         _cardClient = cardClient;
         _accountClient = accountClient;
+        _customerClient = customerClient;
         _spendingLimitSaga = spendingLimitSaga;
         _accountSaleSaga = accountSaleSaga;
         _logger = logger;
@@ -44,13 +47,58 @@ public class AuthorizationService
     public async Task<ServiceResult<CreateAuthorizationResponse>> CreateAuthorizationAsync(
         CreateAuthorizationRequest request)
     {
+        //account existance
+        var accountExistsResult = await _accountClient.AccountExistsAsync(request.AccountNo);
+        if (!accountExistsResult.IsSuccess)
+        {
+            return ServiceResult<CreateAuthorizationResponse>
+                .Failure(Errors.AccountClientError);
+        }
+        
+        if (accountExistsResult.Data == false)
+        {
+            return ServiceResult<CreateAuthorizationResponse>
+                .Failure(Errors.AccountNotFoundError);
+        }
+
+        //card existance
+        if (request.CardToken != null)
+        {
+            var cardExistsResult = await _cardClient.CardExistsAsync(request.CardToken);
+            if (!cardExistsResult.IsSuccess)
+            {
+                return ServiceResult<CreateAuthorizationResponse>
+                    .Failure(Errors.CardClientError);
+            }
+        
+            if (cardExistsResult.Data == false)
+            {
+                return ServiceResult<CreateAuthorizationResponse>
+                    .Failure(Errors.CardNotFoundError);
+            }
+        }
+        
+        //customer existance
+        var customerExistsResult = await _customerClient.CustomerExistsAsync(request.CustomerId!.Value);
+        if (!customerExistsResult.IsSuccess)
+        {
+            return ServiceResult<CreateAuthorizationResponse>
+                .Failure(Errors.CustomerClientError);
+        }
+        
+        if (customerExistsResult.Data == false)
+        {
+            return ServiceResult<CreateAuthorizationResponse>
+                .Failure(Errors.CustomerNotFoundError);
+        }
+        
         Authorization auth = new Authorization
         {
             Balance = request.Balance,
             AccountNo = request.AccountNo,
             CardToken = request.CardToken,
             ChannelCode = request.ChannelCode,
-            CustomerId = request.CustomerId,
+            CustomerId = request.CustomerId.Value,
             Guid = Guid.NewGuid().ToString(),
             Otc = request.Otc,
             Ots = request.Ots,

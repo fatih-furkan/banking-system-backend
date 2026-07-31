@@ -25,8 +25,14 @@ public class CardCreator
     public async Task<ServiceResult<CreateCardResponse>> CreateCardAsync(CreateCardRequest request)
     {
         
-        bool accountExists = await _accountClient.AccountExistsAsync(request.AccountNo);
-        if (!accountExists)
+        var accountExistsResult = await _accountClient.AccountExistsAsync(request.AccountNo);
+
+        if (!accountExistsResult.IsSuccess)
+        {
+            return ServiceResult<CreateCardResponse>.Failure(Errors.AccountClientError);
+        }
+        
+        if (accountExistsResult.Data == false)
         {
             return ServiceResult<CreateCardResponse>.Failure(Errors.AccountNotFoundError);
         }

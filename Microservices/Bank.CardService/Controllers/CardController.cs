@@ -44,8 +44,18 @@ public class CardController: ControllerBase
     [HttpGet("{cardToken}/exists")]
     public async Task<ActionResult<bool>> Exists(string cardToken)
     {
-        bool exists = await _cardService.CheckExistenceByCardTokenAsync(cardToken);
-        return Ok(exists);
+        var result =
+            await _cardService.CheckExistenceByCardTokenAsync(cardToken);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                result.StatusCode,
+                new ErrorResponse(result.Error)
+            );
+        }
+
+        return Ok(result.Data);
     }
 
     [HttpPost]

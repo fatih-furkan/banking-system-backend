@@ -42,64 +42,65 @@ public class SpendingLimitService
     public async Task<ServiceResult<CreateSpendingLimitResponse?>> AddSpendingLimitAsync(
         CreateSpendingLimitRequest createSpendingLimitRequest)
     {
-        bool customerExists = await _customerClient
-            .CustomerExistsAsync(createSpendingLimitRequest.CustomerId.Value);
-        
-        if(!customerExists)
+        var customerExistsResult = await _customerClient.CustomerExistsAsync(createSpendingLimitRequest.CustomerId!.Value);
+        if (!customerExistsResult.IsSuccess)
         {
             return ServiceResult<CreateSpendingLimitResponse?>
-                .Failure(Errors.CustomerNotExistError);
+                .Failure(Errors.CustomerClientError);
         }
-        else
+        
+        if (customerExistsResult.Data == false)
         {
-            
-            SpendingLimit? chargeLimit = 
-                await _context.SpendingLimits.FindAsync(createSpendingLimitRequest.CustomerId);
-            
-            //if limits already exist for this customer
-            if ( chargeLimit != null)
-            {
-                return ServiceResult<CreateSpendingLimitResponse?>
-                    .Failure(Errors.LimitAlreadyExistsError);
-            }
-            
-            var time = DateTime.UtcNow;
-            
-            var limit = new SpendingLimit
-            {
-                CustomerId = createSpendingLimitRequest.CustomerId.Value,
-                AnnualLimit = createSpendingLimitRequest.AnnualLimit!.Value,
-                DailyLimit = createSpendingLimitRequest.DailyLimit!.Value,
-                MonthlyLimit = createSpendingLimitRequest.MonthlyLimit!.Value
-            };
-            
-            var currentLimit = new CurrentSpendingLimit
-            {
-                CustomerId = createSpendingLimitRequest.CustomerId.Value,
-                AnnualLimit = createSpendingLimitRequest.AnnualLimit.Value,
-                DailyLimit = createSpendingLimitRequest.DailyLimit.Value,
-                MonthlyLimit = createSpendingLimitRequest.MonthlyLimit.Value,
-                LastDailyReset = time,
-                LastAnnualReset = time,
-                LastMonthlyReset = time
-            };
-            
-            _context.SpendingLimits.Add(limit);
-            _context.CurrentSpendingLimits.Add(currentLimit);
-            await _context.SaveChangesAsync();
-            
-            CreateSpendingLimitResponse response = new CreateSpendingLimitResponse
-            {
-                CustomerId = limit.CustomerId,
-                AnnualLimit = limit.AnnualLimit,
-                MonthlyLimit = limit.MonthlyLimit,
-                DailyLimit = limit.DailyLimit,
-                CurrentAnnualLimit = currentLimit.AnnualLimit,
-                CurrentMonthlyLimit = currentLimit.MonthlyLimit,
-                CurrentDailyLimit =  currentLimit.DailyLimit
-            };
-            return ServiceResult<CreateSpendingLimitResponse?>.Success(response);
+            return ServiceResult<CreateSpendingLimitResponse?>
+                .Failure(Errors.CustomerNotFoundError);
         }
+        
+        SpendingLimit? chargeLimit = 
+            await _context.SpendingLimits.FindAsync(createSpendingLimitRequest.CustomerId);
+        
+        //if limits already exist for this customer
+        if ( chargeLimit != null)
+        {
+            return ServiceResult<CreateSpendingLimitResponse?>
+                .Failure(Errors.LimitAlreadyExistsError);
+        }
+        
+        var time = DateTime.UtcNow;
+        
+        var limit = new SpendingLimit
+        {
+            CustomerId = createSpendingLimitRequest.CustomerId!.Value,
+            AnnualLimit = createSpendingLimitRequest.AnnualLimit!.Value,
+            DailyLimit = createSpendingLimitRequest.DailyLimit!.Value,
+            MonthlyLimit = createSpendingLimitRequest.MonthlyLimit!.Value
+        };
+        
+        var currentLimit = new CurrentSpendingLimit
+        {
+            CustomerId = createSpendingLimitRequest.CustomerId.Value,
+            AnnualLimit = createSpendingLimitRequest.AnnualLimit.Value,
+            DailyLimit = createSpendingLimitRequest.DailyLimit.Value,
+            MonthlyLimit = createSpendingLimitRequest.MonthlyLimit.Value,
+            LastDailyReset = time,
+            LastAnnualReset = time,
+            LastMonthlyReset = time
+        };
+        
+        _context.SpendingLimits.Add(limit);
+        _context.CurrentSpendingLimits.Add(currentLimit);
+        await _context.SaveChangesAsync();
+        
+        CreateSpendingLimitResponse response = new CreateSpendingLimitResponse
+        {
+            CustomerId = limit.CustomerId,
+            AnnualLimit = limit.AnnualLimit,
+            MonthlyLimit = limit.MonthlyLimit,
+            DailyLimit = limit.DailyLimit,
+            CurrentAnnualLimit = currentLimit.AnnualLimit,
+            CurrentMonthlyLimit = currentLimit.MonthlyLimit,
+            CurrentDailyLimit =  currentLimit.DailyLimit
+        };
+        return ServiceResult<CreateSpendingLimitResponse?>.Success(response);
     }
     
     public async Task<bool> DeleteSpendingLimitAsync(long customerId)

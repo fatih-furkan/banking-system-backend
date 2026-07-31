@@ -14,12 +14,13 @@ public class CreateAuthorizationRequest
     )]
     public string? TransactionStatus { get; set; }
 
+    [Required]
     [Range(
         1,
         long.MaxValue,
         ErrorMessage = Constants.ExceptionMessages.CustomerIdShort
     )]
-    public long CustomerId { get; set; }
+    public long? CustomerId { get; set; }
 
     [StringLength(
         100,
@@ -52,7 +53,7 @@ public class CreateAuthorizationRequest
         MinimumLength = 8,
         ErrorMessage = Constants.ExceptionMessages.AccountNoLengthError
     )]
-    public string? AccountNo { get; set; }
+    public string AccountNo { get; set; } = null!;
     
     public ChannelCode ChannelCode { get; set; }
 

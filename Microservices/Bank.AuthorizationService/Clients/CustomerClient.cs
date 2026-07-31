@@ -1,4 +1,7 @@
-﻿namespace Bank.AuthorizationService.Clients;
+﻿using Bank.Shared;
+using Bank.Shared.Constants;
+
+namespace Bank.AuthorizationService.Clients;
 
 public class CustomerClient
 {
@@ -9,10 +12,23 @@ public class CustomerClient
         _httpClient = httpClient;
     }
 
-    public async Task<bool> CustomerExistsAsync(long customerId)
+    public async Task<ServiceResult<bool>> CustomerExistsAsync(long customerId)
     {
-        return await _httpClient.GetFromJsonAsync<bool>(
+
+        using var response = await _httpClient.GetAsync(
             $"/api/customer/{customerId}/exists"
         );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return ServiceResult<bool>.Failure(
+                Errors.CustomerClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        bool exists = await response.Content.ReadFromJsonAsync<bool>();
+
+        return ServiceResult<bool>.Success(exists);
     }
 }

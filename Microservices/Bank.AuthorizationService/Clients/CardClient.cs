@@ -50,5 +50,27 @@ public class CardClient
 
         return ServiceResult<string>.Success(accountNo);
     }
+    
+    public async Task<ServiceResult<bool>> CardExistsAsync(
+        string cardToken)
+    {
+        string encodedCardToken = Uri.EscapeDataString(cardToken);
+
+        using var response = await _httpClient.GetAsync(
+            $"/api/card/{encodedCardToken}/exists"
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return ServiceResult<bool>.Failure(
+                Errors.CardClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        bool exists = await response.Content.ReadFromJsonAsync<bool>();
+
+        return ServiceResult<bool>.Success(exists);
+    }
 
 }
