@@ -18,7 +18,7 @@ public class Authorization
 
     public string? TransactionDescription { get; set; }
 
-    public string? AccountNo { get; set; }
+    public string AccountNo { get; set; } = null!;
 
     public string Guid { get; set; } = null!;
 

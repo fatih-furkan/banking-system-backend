@@ -62,7 +62,8 @@ public class AppDbContext: DbContext
 
             entity.Property(e => e.AccountNo)
                 .HasColumnName("ACCOUNT_NO")
-                .HasMaxLength(8);
+                .HasMaxLength(8)
+                .IsRequired();
 
             entity.Property(x => x.ChannelCode)
                 .HasConversion(
