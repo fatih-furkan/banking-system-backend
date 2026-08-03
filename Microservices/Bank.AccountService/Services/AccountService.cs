@@ -96,6 +96,39 @@ public class AccountService
         return false;
     }
     
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string accountNo)
+    {
+        bool isOnlyDigits =
+            !string.IsNullOrEmpty(request.Status) &&
+            request.Status.All(c => c is >= '0' and <= '9');
+        
+        if (!isOnlyDigits)
+        {
+            return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
+        }
+        
+        var account = await _context.Accounts
+            .FirstOrDefaultAsync(account => account.AccountNo == accountNo);
+        
+        if (account == null)
+        {
+            return ServiceResult<Unit>.Failure(Errors.AccountNotFoundError);
+        }
+        
+        account.Status = request.Status;
+        await _context.SaveChangesAsync();
+        return ServiceResult<Unit>.Success(new Unit());
+    }
+    
+    public async Task<ServiceResult<bool>> CheckExistenceByAccountNoAsync(
+        string accountNo)
+    {
+        bool exists = await _context.Accounts
+            .AnyAsync(account => account.AccountNo == accountNo);
+
+        return ServiceResult<bool>.Success(exists);
+    }
+    
     public async Task<ServiceResult<DepositResponse>> DepositAsync(
     DepositRequest request)
     {
@@ -389,183 +422,151 @@ public class AccountService
     public async Task<ServiceResult<WithdrawResponse>> FastWithdrawAsync(WithdrawRequest request)
     {
         
-    decimal amount = request.Amount!.Value;
+        decimal amount = request.Amount!.Value;
 
-    if (decimal.Round(amount, 2) != amount)
-    {
-        return ServiceResult<WithdrawResponse>.Failure(
-            Errors.PrecisionError,
-            StatusCodes.Status400BadRequest
-        );
-    }
-
-    if (amount <= 0)
-    {
-        return ServiceResult<WithdrawResponse>.Failure(
-            Errors.NegativeAmountError,
-            StatusCodes.Status400BadRequest
-        );
-    }
-
-    var theAccount = await _context.Accounts
-        .FirstOrDefaultAsync(
-            account => account.AccountNo == request.AccountNo
-        );
-
-    if (theAccount is null)
-    {
-        return ServiceResult<WithdrawResponse>.Failure(
-            Errors.AccountNotFoundError,
-            StatusCodes.Status404NotFound
-        );
-    }
-
-    var limitRequest = new UseChargeLimitRequest
-    {
-        Amount = amount,
-        ChannelCode = request.ChannelCode!.Value,
-        CustomerId = theAccount.CustomerId
-    };
-        
-
-    bool withdrawalMade = false;
-    string? authorizationGuid = null;
-    bool limitUsed = false;
-        
-    try
-    {
-            
-        var limitResult = await _chargeLimitSaga.ExecuteAsync(
-            limitRequest
-        );
-
-        if (!limitResult.IsSuccess)
+        if (decimal.Round(amount, 2) != amount)
         {
             return ServiceResult<WithdrawResponse>.Failure(
-                limitResult.Error ?? Errors.InsufficientLimitError,
-                limitResult.StatusCode
+                Errors.PrecisionError,
+                StatusCodes.Status400BadRequest
             );
         }
 
-        limitUsed = true;
-        
-        int affectedRows =
-            await _context.Accounts
-                .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(account => account.Balance,
-                        account => account.Balance - request.Amount)
+        if (amount <= 0)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(
+                Errors.NegativeAmountError,
+                StatusCodes.Status400BadRequest
+            );
+        }
+
+        var theAccount = await _context.Accounts
+            .FirstOrDefaultAsync(
+                account => account.AccountNo == request.AccountNo
+            );
+
+        if (theAccount is null)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(
+                Errors.AccountNotFoundError,
+                StatusCodes.Status404NotFound
+            );
+        }
+
+        var limitRequest = new UseChargeLimitRequest
+        {
+            Amount = amount,
+            ChannelCode = request.ChannelCode!.Value,
+            CustomerId = theAccount.CustomerId
+        };
+            
+
+        bool withdrawalMade = false;
+        string? authorizationGuid = null;
+        bool limitUsed = false;
+            
+        try
+        {
+                
+            var limitResult = await _chargeLimitSaga.ExecuteAsync(
+                limitRequest
+            );
+
+            if (!limitResult.IsSuccess)
+            {
+                return ServiceResult<WithdrawResponse>.Failure(
+                    limitResult.Error ?? Errors.InsufficientLimitError,
+                    limitResult.StatusCode
+                );
+            }
+
+            limitUsed = true;
+            
+            int affectedRows =
+                await _context.Accounts
+                    .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(account => account.Balance,
+                            account => account.Balance - request.Amount)
+                    );
+
+            if (affectedRows == 0)
+            {
+                return ServiceResult<WithdrawResponse>.Failure(
+                    Errors.InsufficientFundsError
+                );
+            }
+
+            withdrawalMade = true;
+
+            // account was loaded before the raw SQL update,
+            // so refresh its Balance from the database.
+            await _context.Entry(theAccount).ReloadAsync();
+
+            var authorizationRequest = new CreateAuthorizationRequest
+            {
+                AccountNo = theAccount.AccountNo,
+                Balance = theAccount.Balance,
+                CardToken = null,
+                ChannelCode = request.ChannelCode,
+                CustomerId = theAccount.CustomerId,
+                Otc = Constants.Otcs.Withdrawal,
+                Ots = Constants.Ots.WithdrawalOts.FastWihtdrawal,
+                TransactionAmount = amount,
+                TransactionDescription = "Fast Withdrawal",
+                TransactionStatus = "1",
+                TransactionId = request.TransactionId
+            };
+
+            var createAuthorizationResult =
+                await _authorizationClient.CreateAuthorizationAsync(
+                    authorizationRequest
                 );
 
-        if (affectedRows == 0)
-        {
-            return ServiceResult<WithdrawResponse>.Failure(
-                Errors.InsufficientFundsError
-            );
-        }
-
-        withdrawalMade = true;
-
-        // account was loaded before the raw SQL update,
-        // so refresh its Balance from the database.
-        await _context.Entry(theAccount).ReloadAsync();
-
-        var authorizationRequest = new CreateAuthorizationRequest
-        {
-            AccountNo = theAccount.AccountNo,
-            Balance = theAccount.Balance,
-            CardToken = null,
-            ChannelCode = request.ChannelCode,
-            CustomerId = theAccount.CustomerId,
-            Otc = Constants.Otcs.Withdrawal,
-            Ots = Constants.Ots.WithdrawalOts.FastWihtdrawal,
-            TransactionAmount = amount,
-            TransactionDescription = "Fast Withdrawal",
-            TransactionStatus = "1",
-            TransactionId = request.TransactionId
-        };
-
-        var createAuthorizationResult =
-            await _authorizationClient.CreateAuthorizationAsync(
-                authorizationRequest
-            );
-
-        if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
-        {
-            return ServiceResult<WithdrawResponse>
-                .Failure(createAuthorizationResult.Error ?? Errors.AuthorizationClientError, 
-                    createAuthorizationResult.StatusCode);
-        }
-
-        CreateAuthorizationResponse authorization = createAuthorizationResult.Data;
-
-        authorizationGuid = authorization.Guid;
-
-        return ServiceResult<WithdrawResponse>.Success(
-            new WithdrawResponse
+            if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
             {
-                TransactionAmount = authorization.TransactionAmount,
-                Balance = authorization.Balance,
-                TransactionTime = authorization.TransactionDate,
-                TransactionId = request.TransactionId!.Value
+                return ServiceResult<WithdrawResponse>
+                    .Failure(createAuthorizationResult.Error ?? Errors.AuthorizationClientError, 
+                        createAuthorizationResult.StatusCode);
             }
-        );
-    }
-    catch (Exception exception)
-    {
 
-        await CompensateWithdrawAsync(
-            request.AccountNo,
-            amount,
-            limitRequest,
-            authorizationGuid,
-            withdrawalMade,
-            limitUsed
-        );
+            CreateAuthorizationResponse authorization = createAuthorizationResult.Data;
 
-        throw;
-    }
-    }
+            authorizationGuid = authorization.Guid;
 
-    public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string accountNo)
-    {
-        bool isOnlyDigits =
-            !string.IsNullOrEmpty(request.Status) &&
-            request.Status.All(c => c is >= '0' and <= '9');
-        
-        if (!isOnlyDigits)
-        {
-            return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
+            return ServiceResult<WithdrawResponse>.Success(
+                new WithdrawResponse
+                {
+                    TransactionAmount = authorization.TransactionAmount,
+                    Balance = authorization.Balance,
+                    TransactionTime = authorization.TransactionDate,
+                    TransactionId = request.TransactionId!.Value
+                }
+            );
         }
-        
-        var account = await _context.Accounts
-            .FirstOrDefaultAsync(account => account.AccountNo == accountNo);
-        
-        if (account == null)
+        catch (Exception)
         {
-            return ServiceResult<Unit>.Failure(Errors.AccountNotFoundError);
+
+            await CompensateWithdrawAsync(
+                request.AccountNo,
+                amount,
+                limitRequest,
+                authorizationGuid,
+                withdrawalMade,
+                limitUsed
+            );
+
+            throw;
         }
-        
-        account.Status = request.Status;
-        await _context.SaveChangesAsync();
-        return ServiceResult<Unit>.Success(new Unit());
-    }
-    
-    public async Task<ServiceResult<bool>> CheckExistenceByAccountNoAsync(
-        string accountNo)
-    {
-        bool exists = await _context.Accounts
-            .AnyAsync(account => account.AccountNo == accountNo);
-
-        return ServiceResult<bool>.Success(exists);
     }
 
-    //should be called from authorization
+    //should be called from authorization microservice
     public async Task<ServiceResult<SaleResponse>> SaleAsync(SaleRequest request)
     {
         int affectedRows =
             await _context.Accounts
-                .Where(account => account.AccountNo == request.AccountNo  && account.Balance >= request.Amount)
+                .Where(account => account.AccountNo == request.AccountNo && 
+                                  account.Balance >= request.Amount)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(account => account.Balance,
                         account => account.Balance - request.Amount)
