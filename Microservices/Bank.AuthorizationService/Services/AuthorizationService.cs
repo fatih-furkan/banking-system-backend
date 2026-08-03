@@ -9,6 +9,7 @@ using Bank.Shared;
 using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
+using Oracle.ManagedDataAccess.Client;
 
 namespace Bank.AuthorizationService.Services;
 
@@ -47,12 +48,13 @@ public class AuthorizationService
     public async Task<ServiceResult<CreateAuthorizationResponse>> CreateAuthorizationAsync(
         CreateAuthorizationRequest request)
     {
-        //account existance
+        //account existence
         var accountExistsResult = await _accountClient.AccountExistsAsync(request.AccountNo);
         if (!accountExistsResult.IsSuccess)
         {
             return ServiceResult<CreateAuthorizationResponse>
-                .Failure(Errors.AccountClientError);
+                .Failure(accountExistsResult.Error ?? Errors.AccountClientError,
+                    accountExistsResult.StatusCode);
         }
         
         if (accountExistsResult.Data == false)
@@ -61,14 +63,15 @@ public class AuthorizationService
                 .Failure(Errors.AccountNotFoundError);
         }
 
-        //card existance
+        //card existence
         if (request.CardToken != null)
         {
             var cardExistsResult = await _cardClient.CardExistsAsync(request.CardToken);
             if (!cardExistsResult.IsSuccess)
             {
                 return ServiceResult<CreateAuthorizationResponse>
-                    .Failure(Errors.CardClientError);
+                    .Failure(cardExistsResult.Error ?? Errors.CardClientError,
+                        cardExistsResult.StatusCode);
             }
         
             if (cardExistsResult.Data == false)
@@ -78,12 +81,13 @@ public class AuthorizationService
             }
         }
         
-        //customer existance
+        //customer existence
         var customerExistsResult = await _customerClient.CustomerExistsAsync(request.CustomerId!.Value);
         if (!customerExistsResult.IsSuccess)
         {
             return ServiceResult<CreateAuthorizationResponse>
-                .Failure(Errors.CustomerClientError);
+                .Failure(customerExistsResult.Error ?? Errors.CustomerClientError,
+                    customerExistsResult.StatusCode);
         }
         
         if (customerExistsResult.Data == false)
@@ -120,8 +124,19 @@ public class AuthorizationService
             );
         }
         
-        _context.Add(auth);
-        await _context.SaveChangesAsync();
+        try
+        {
+            _context.Authorizations.Add(auth);
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception)
+            when (IsDuplicateTransactionId(exception))
+        {
+            return ServiceResult<CreateAuthorizationResponse>.Failure(
+                Errors.TransactionAlreadyExistsError,
+                StatusCodes.Status409Conflict
+            );
+        }
         
         CreateAuthorizationResponse response = new CreateAuthorizationResponse
         {
@@ -439,5 +454,37 @@ public class AuthorizationService
                 );
             }
         }
+    }
+    
+    private static bool IsDuplicateTransactionId(
+        DbUpdateException exception)
+    {
+        OracleException? oracleException =
+            FindOracleException(exception);
+
+        return oracleException is not null
+               && oracleException.Number == 1
+               && oracleException.Message.Contains(
+                   "IX_AUTHORIZATION_TRXN_ID",
+                   StringComparison.OrdinalIgnoreCase
+               );
+    }
+    
+    private static OracleException? FindOracleException(
+        Exception exception)
+    {
+        Exception? currentException = exception;
+
+        while (currentException is not null)
+        {
+            if (currentException is OracleException oracleException)
+            {
+                return oracleException;
+            }
+
+            currentException = currentException.InnerException;
+        }
+
+        return null;
     }
 }

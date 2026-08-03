@@ -118,7 +118,8 @@ public class ChargeLimitService
         if (!customerExistsResult.IsSuccess)
         {
             return ServiceResult<CreateCurrentChargeLimitResponse?>
-                .Failure(Errors.CustomerClientError);
+                .Failure(customerExistsResult.Error ?? Errors.CustomerClientError,
+                    customerExistsResult.StatusCode);
         }
         
         if(customerExistsResult.Data == false)

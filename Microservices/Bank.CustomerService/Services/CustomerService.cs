@@ -73,7 +73,8 @@ public class CustomerService
             if (!createChargeLimitResult.IsSuccess)
             {
                 return ServiceResult<CreateCustomerResponse>
-                    .Failure(Errors.ChargeLimitCreateError);
+                    .Failure(createChargeLimitResult.Error ?? Errors.ChargeLimitCreateError,
+                        createChargeLimitResult.StatusCode);
             }
             
             var createSpendingLimitResult = await _authorizationClient.AddSpendingLimitAsync(
@@ -88,7 +89,8 @@ public class CustomerService
             if (!createSpendingLimitResult.IsSuccess)
             {
                 return ServiceResult<CreateCustomerResponse>
-                    .Failure(Errors.SpendingLimitCreateError);
+                    .Failure(createSpendingLimitResult.Error ?? Errors.SpendingLimitCreateError,
+                        createSpendingLimitResult.StatusCode);
             }
 
             customer.Status = createCustomerRequest.Status;

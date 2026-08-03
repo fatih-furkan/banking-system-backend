@@ -74,7 +74,8 @@ public class CardService
         if (!customerExistsResult.IsSuccess)
         {
             return ServiceResult<CreateCardResponse>
-                .Failure(Errors.CardServiceResponseError);
+                .Failure(customerExistsResult.Error ?? Errors.CustomerClientError,
+                    customerExistsResult.StatusCode);
         }
 
         if (customerExistsResult.Data == false)
@@ -87,7 +88,9 @@ public class CardService
         var cardSagaResult = await _createCardSaga.ExecuteAsync(request);
         if (cardSagaResult.IsSuccess == false)
         {
-            return ServiceResult<CreateCardResponse>.Failure(Errors.CardSagaError);
+            return ServiceResult<CreateCardResponse>
+                .Failure(cardSagaResult.Error ?? Errors.CardSagaError,
+                    cardSagaResult.StatusCode);
         }
         try
         {

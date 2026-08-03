@@ -210,7 +210,9 @@ public class AccountService
 
             if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
             {
-                return ServiceResult<DepositResponse>.Failure(Errors.AuthorizationClientError);
+                return ServiceResult<DepositResponse>
+                    .Failure(createAuthorizationResult.Error ?? Errors.AuthorizationClientError,
+                        createAuthorizationResult.StatusCode);
             }
 
             CreateAuthorizationResponse authorization = createAuthorizationResult.Data;
@@ -349,7 +351,9 @@ public class AccountService
 
             if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
             {
-                return ServiceResult<WithdrawResponse>.Failure(Errors.AuthorizationClientError);
+                return ServiceResult<WithdrawResponse>
+                    .Failure(createAuthorizationResult.Error ?? Errors.AuthorizationClientError,
+                        createAuthorizationResult.StatusCode);
             }
 
             CreateAuthorizationResponse authorization = createAuthorizationResult.Data;
@@ -488,7 +492,9 @@ public class AccountService
 
         if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
         {
-            return ServiceResult<WithdrawResponse>.Failure(Errors.AuthorizationClientError);
+            return ServiceResult<WithdrawResponse>
+                .Failure(createAuthorizationResult.Error ?? Errors.AuthorizationClientError, 
+                    createAuthorizationResult.StatusCode);
         }
 
         CreateAuthorizationResponse authorization = createAuthorizationResult.Data;

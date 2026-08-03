@@ -46,7 +46,8 @@ public class SpendingLimitService
         if (!customerExistsResult.IsSuccess)
         {
             return ServiceResult<CreateSpendingLimitResponse?>
-                .Failure(Errors.CustomerClientError);
+                .Failure(customerExistsResult.Error ?? Errors.CustomerClientError,
+                    customerExistsResult.StatusCode);
         }
         
         if (customerExistsResult.Data == false)
