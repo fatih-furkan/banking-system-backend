@@ -1,4 +1,5 @@
-﻿using Bank.CustomerService.Models.ClientModels;
+﻿using System.Text.Json;
+using Bank.CustomerService.Models.ClientModels;
 using Bank.Shared;
 using Bank.Shared.Constants;
 
@@ -28,31 +29,48 @@ public class AccountClient
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(
-                cancellationToken
-            );
+            ErrorResponse? errorResponse = null;
 
-            _logger.LogWarning(
-                "Limit service failed to create charge limits. " +
-                "StatusCode: {StatusCode}, Response: {ResponseBody}",
-                response.StatusCode,
-                errorBody
-            );
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>(
+                        cancellationToken
+                    );
+            }
+            catch (JsonException)
+            {
+            }
 
             return ServiceResult<CreateChargeLimitResponse>.Failure(
-                Errors.ChargeLimitCreateError
+                errorResponse?.Error ?? Errors.ChargeLimitCreateError,
+                (int)response.StatusCode
             );
         }
 
-        CreateChargeLimitResponse? result =
-            await response.Content.ReadFromJsonAsync<CreateChargeLimitResponse>(
-                cancellationToken
+        CreateChargeLimitResponse? result;
+
+        try
+        {
+            result =
+                await response.Content
+                    .ReadFromJsonAsync<CreateChargeLimitResponse>(
+                        cancellationToken
+                    );
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.AccountServiceResponseError,
+                StatusCodes.Status502BadGateway
             );
+        }
 
         if (result is null)
         {
             throw new GeneralException(
-                Errors.UnexpectedError
+                Errors.AccountServiceResponseError,
+                StatusCodes.Status502BadGateway
             );
         }
 

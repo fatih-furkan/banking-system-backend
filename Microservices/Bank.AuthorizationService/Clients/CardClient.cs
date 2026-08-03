@@ -62,13 +62,36 @@ public class CardClient
 
         if (!response.IsSuccessStatusCode)
         {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
             return ServiceResult<bool>.Failure(
-                Errors.CardClientError,
+                errorResponse?.Error ?? Errors.CardClientError,
                 (int)response.StatusCode
             );
         }
 
-        bool exists = await response.Content.ReadFromJsonAsync<bool>();
+        bool exists;
+
+        try
+        {
+            exists = await response.Content.ReadFromJsonAsync<bool>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.CardServiceResponseError,
+                StatusCodes.Status502BadGateway
+            );
+        }
 
         return ServiceResult<bool>.Success(exists);
     }

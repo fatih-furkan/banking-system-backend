@@ -43,17 +43,6 @@ builder.Services.AddHttpClient<CustomerClient>(client =>
     client.BaseAddress = new Uri(baseAddress);
 });
 
-builder.Services.AddHttpClient<CardClient>(client =>
-{
-    string baseAddress =
-        builder.Configuration["Services:CardService"]
-        ?? throw new InvalidOperationException(
-            Constants.ExceptionMessages.CardServiceUrlError
-        );
-
-    client.BaseAddress = new Uri(baseAddress);
-});
-
 builder.Services.AddHttpClient<AuthorizationClient>(client =>
 {
     string baseAddress =

@@ -1,4 +1,5 @@
-﻿using Bank.AccountService.Models.ClientModels;
+﻿using System.Text.Json;
+using Bank.AccountService.Models.ClientModels;
 using Bank.Shared;
 using Bank.Shared.Constants;
 
@@ -13,51 +14,97 @@ public class AuthorizationClient
         _httpClient = httpClient;
     }
 
-    public async Task<CreateAuthorizationResponse> CreateAuthorizationAsync(CreateAuthorizationRequest request)
+    public async Task<ServiceResult<CreateAuthorizationResponse>>
+        CreateAuthorizationAsync(CreateAuthorizationRequest request)
     {
         using var response = await _httpClient.PostAsJsonAsync(
             "/api/authorization",
             request
         );
 
-        
-        var responseBody = await response.Content.ReadAsStringAsync();
-        
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            ErrorResponse? errorResponse = null;
 
-        var authorization =
-            await response.Content.ReadFromJsonAsync<CreateAuthorizationResponse>();
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+                // The downstream service returned an invalid error body.
+            }
 
-        return authorization
-               ?? throw new GeneralException(
-                   Errors.AuthorizationServiceResponseError
-               );
+            return ServiceResult<CreateAuthorizationResponse>.Failure(
+                errorResponse?.Error
+                ?? Errors.AuthorizationServiceResponseError,
+                (int)response.StatusCode
+            );
+        }
+
+        CreateAuthorizationResponse? authorization;
+
+        try
+        {
+            authorization =
+                await response.Content
+                    .ReadFromJsonAsync<CreateAuthorizationResponse>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.AuthorizationServiceResponseError,
+                StatusCodes.Status502BadGateway
+            );
+        }
+
+        if (authorization is null)
+        {
+            throw new GeneralException(
+                Errors.AuthorizationServiceResponseError,
+                StatusCodes.Status502BadGateway
+            );
+        }
+
+        return ServiceResult<CreateAuthorizationResponse>.Success(
+            authorization
+        );
     }
 
-    public async Task<ServiceResult<Unit>> AssignStatusAsync(string guid, string status)
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(
+        string guid,
+        string status)
     {
-        
         var body = new
         {
             Status = status
         };
-        
+
         using var response = await _httpClient.PostAsJsonAsync(
-            $"/api/authorization/{guid}/assign-status",
+            $"/api/authorization/{Uri.EscapeDataString(guid)}/assign-status",
             body
         );
-        
+
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody =
-                await response.Content.ReadAsStringAsync();
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
 
             return ServiceResult<Unit>.Failure(
-                Errors.AuthClientError
+                errorResponse?.Error ?? Errors.AuthClientError,
+                (int)response.StatusCode
             );
         }
 
         return ServiceResult<Unit>.Success(new Unit());
-
     }
 }

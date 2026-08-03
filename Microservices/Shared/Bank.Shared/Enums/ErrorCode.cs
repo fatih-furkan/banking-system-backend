@@ -52,5 +52,9 @@ public enum ErrorCode
     TransactionAlreadyExistsErr,
     AccountClientErr,
     CardNotFoundErr,
-    CustomerClientErr
+    CustomerClientErr,
+    AuthorizationClientErr,
+    CustomerServiceResponseErr,
+    CardServiceResponseErr,
+    AccountServiceResponseErr
 }

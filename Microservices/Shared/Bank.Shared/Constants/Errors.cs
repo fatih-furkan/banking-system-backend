@@ -259,4 +259,24 @@ public static class Errors
         new(
             ErrorCode.CustomerClientErr,
             Constants.ExceptionMessages.CustomerClientError);
+    
+    public static readonly Error AuthorizationClientError =
+        new(
+            ErrorCode.AuthorizationClientErr,
+            Constants.ExceptionMessages.AuthorizationClientError);
+    
+    public static readonly Error CustomerServiceResponseError =
+        new(
+            ErrorCode.CustomerServiceResponseErr,
+            Constants.ExceptionMessages.CustomerServiceResponseError);
+    
+    public static readonly Error CardServiceResponseError =
+        new(
+            ErrorCode.CardServiceResponseErr,
+            Constants.ExceptionMessages.CardServiceResponseError);
+    
+    public static readonly Error AccountServiceResponseError =
+        new(
+            ErrorCode.AccountServiceResponseErr,
+            Constants.ExceptionMessages.AccountServiceResponseError);
 }

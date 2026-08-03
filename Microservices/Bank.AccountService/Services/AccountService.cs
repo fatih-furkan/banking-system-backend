@@ -46,35 +46,40 @@ public class AccountService
     public async Task<ServiceResult<CreateAccountResponse?>> AddAccountAsync(
         CreateAccountRequest createAccountRequest)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(createAccountRequest.CustomerId!.Value);
+        var customerExistsResult = await _customerClient
+            .CustomerExistsAsync(createAccountRequest.CustomerId!.Value);
+
+        if (!customerExistsResult.IsSuccess)
+        {
+            return ServiceResult<CreateAccountResponse?>
+                .Failure(Errors.CustomerClientError);
+        }
         
-        if(!customerExists)
+        if(customerExistsResult.Data == false)
         {
             return ServiceResult<CreateAccountResponse?>
                 .Failure(Errors.CustomerNotExistError);
         }
-        else
+        
+        var accountNo = await GetNextAccountNoSequenceValueAsync();
+        var account = new Account
         {
-            var accountNo = await GetNextAccountNoSequenceValueAsync();
-            var account = new Account
-            {
-                AccountNo = accountNo.ToString(),
-                BranchCode = createAccountRequest.BranchCode,
-                CustomerId = createAccountRequest.CustomerId.Value,
-                Status = createAccountRequest.Status,
-                Balance = 0
-            };
-            _context.Accounts.Add(account);
-            await _context.SaveChangesAsync();
-            CreateAccountResponse response = new CreateAccountResponse
-            {
-                AccountNo = account.AccountNo,
-                BranchCode = account.BranchCode,
-                CustomerId = account.CustomerId,
-                Status = account.Status
-            };
-            return ServiceResult<CreateAccountResponse?>.Success(response);
-        }
+            AccountNo = accountNo.ToString(),
+            BranchCode = createAccountRequest.BranchCode,
+            CustomerId = createAccountRequest.CustomerId.Value,
+            Status = createAccountRequest.Status,
+            Balance = 0
+        };
+        _context.Accounts.Add(account);
+        await _context.SaveChangesAsync();
+        CreateAccountResponse response = new CreateAccountResponse
+        {
+            AccountNo = account.AccountNo,
+            BranchCode = account.BranchCode,
+            CustomerId = account.CustomerId,
+            Status = account.Status
+        };
+        return ServiceResult<CreateAccountResponse?>.Success(response);
     }
 
     public async Task<bool> DeleteAccountAsync(string accountNo)
@@ -198,11 +203,18 @@ public class AccountService
                 TransactionId = request.TransactionId
             };
 
-            var authorization =
+            var createAuthorizationResult =
                 await _authorizationClient.CreateAuthorizationAsync(
                     authorizationRequest
                 );
 
+            if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
+            {
+                return ServiceResult<DepositResponse>.Failure(Errors.AuthorizationClientError);
+            }
+
+            CreateAuthorizationResponse authorization = createAuthorizationResult.Data;
+            
             authorizationGuid = authorization.Guid;
             
             return ServiceResult<DepositResponse>.Success(
@@ -217,11 +229,6 @@ public class AccountService
         }
         catch (Exception exception)
         {
-            _logger.LogError(
-                exception,
-                "Deposit failed. Starting compensation. AccountNo: {AccountNo}",
-                request.AccountNo
-            );
 
             await CompensateDepositAsync(
                 request.AccountNo,
@@ -335,10 +342,17 @@ public class AccountService
                 TransactionId = request.TransactionId
             };
 
-            var authorization =
+            var createAuthorizationResult =
                 await _authorizationClient.CreateAuthorizationAsync(
                     authorizationRequest
                 );
+
+            if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
+            {
+                return ServiceResult<WithdrawResponse>.Failure(Errors.AuthorizationClientError);
+            }
+
+            CreateAuthorizationResponse authorization = createAuthorizationResult.Data;
 
             authorizationGuid = authorization.Guid;
 
@@ -354,14 +368,7 @@ public class AccountService
         }
         catch (Exception exception)
         {
-            _logger.LogError(
-                exception,
-                "Cash withdrawal failed. Starting compensation. " +
-                "AccountNo: {AccountNo}. TransactionId: {TransactionId}",
-                request.AccountNo,
-                request.TransactionId
-            );
-
+            
             await CompensateWithdrawAsync(
                 request.AccountNo,
                 amount,
@@ -474,10 +481,17 @@ public class AccountService
             TransactionId = request.TransactionId
         };
 
-        var authorization =
+        var createAuthorizationResult =
             await _authorizationClient.CreateAuthorizationAsync(
                 authorizationRequest
             );
+
+        if (!createAuthorizationResult.IsSuccess || createAuthorizationResult.Data == null)
+        {
+            return ServiceResult<WithdrawResponse>.Failure(Errors.AuthorizationClientError);
+        }
+
+        CreateAuthorizationResponse authorization = createAuthorizationResult.Data;
 
         authorizationGuid = authorization.Guid;
 
@@ -493,13 +507,6 @@ public class AccountService
     }
     catch (Exception exception)
     {
-        _logger.LogError(
-            exception,
-            "Fast withdrawal failed. Starting compensation. " +
-            "AccountNo: {AccountNo}. TransactionId: {TransactionId}",
-            request.AccountNo,
-            request.TransactionId
-        );
 
         await CompensateWithdrawAsync(
             request.AccountNo,

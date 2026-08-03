@@ -1,4 +1,5 @@
-﻿using Bank.CardService.Models.Dtos.ClientDtos;
+﻿using System.Text.Json;
+using Bank.CardService.Models.Dtos.ClientDtos;
 using Bank.Shared;
 using Bank.Shared.Constants;
 
@@ -14,38 +15,61 @@ public class AccountClient
     }
 
     //returns accountNo.
-    public async Task<ServiceResult<CreateAccountResponse>> CreateAccountAsync(long customerId, string branchCode)
+    public async Task<ServiceResult<CreateAccountResponse>> CreateAccountAsync(
+        long customerId,
+        string branchCode)
     {
         var body = new
         {
-            customerId = customerId,
-            branchCode = branchCode,
-            status = "1"
+            CustomerId = customerId,
+            BranchCode = branchCode,
+            Status = "1"
         };
-        
-        using var response =  await _httpClient.PostAsJsonAsync(
-            $"/api/account",
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/account",
             body
         );
-        
+
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody =
-                await response.Content.ReadAsStringAsync();
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
 
             return ServiceResult<CreateAccountResponse>.Failure(
-                Errors.AccountCreateError
+                errorResponse?.Error ?? Errors.AccountCreateError,
+                (int)response.StatusCode
             );
         }
 
-        CreateAccountResponse? result =
-            await response.Content.ReadFromJsonAsync<CreateAccountResponse>(
+        CreateAccountResponse? result;
+
+        try
+        {
+            result = await response.Content
+                .ReadFromJsonAsync<CreateAccountResponse>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.AccountServiceResponseError,
+                StatusCodes.Status502BadGateway
             );
+        }
 
         if (result is null)
         {
             throw new GeneralException(
-                Errors.GetAccountError
+                Errors.AccountServiceResponseError,
+                StatusCodes.Status502BadGateway
             );
         }
 
@@ -53,41 +77,85 @@ public class AccountClient
     }
     
     public async Task<ServiceResult<bool>> AccountExistsAsync(
-        string accountNo,
-        CancellationToken cancellationToken = default)
+        string accountNo)
     {
         string encodedAccountNo = Uri.EscapeDataString(accountNo);
 
         using var response = await _httpClient.GetAsync(
-            $"/api/account/{encodedAccountNo}/exists",
-            cancellationToken
+            $"/api/account/{encodedAccountNo}/exists"
         );
 
         if (!response.IsSuccessStatusCode)
         {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
             return ServiceResult<bool>.Failure(
-                Errors.GetAccountError,
+                errorResponse?.Error ?? Errors.AccountClientError,
                 (int)response.StatusCode
             );
         }
 
-        bool exists = await response.Content.ReadFromJsonAsync<bool>(
-            cancellationToken: cancellationToken
-        );
+        bool exists;
+
+        try
+        {
+            exists = await response.Content.ReadFromJsonAsync<bool>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.AccountServiceResponseError,
+                StatusCodes.Status502BadGateway
+            );
+        }
 
         return ServiceResult<bool>.Success(exists);
     }
 
-    public async Task AssignStatusAsync(string accountNo, string status)
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(
+        string accountNo,
+        string status)
     {
+        string encodedAccountNo = Uri.EscapeDataString(accountNo);
+
         var body = new
         {
             Status = status
         };
-        
-        using var response = await _httpClient
-            .PostAsJsonAsync($"/api/account/{accountNo}/assign-status", body);
-        response.EnsureSuccessStatusCode();
-        return;
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            $"/api/account/{encodedAccountNo}/assign-status",
+            body
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
+            return ServiceResult<Unit>.Failure(
+                errorResponse?.Error ?? Errors.AccountClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        return ServiceResult<Unit>.Success(new Unit());
     }
 }

@@ -42,96 +42,109 @@ public class ChargeLimitService
     public async Task<ServiceResult<CreateChargeLimitResponse?>> AddChargeLimitAsync(
         CreateChargeLimitRequest createChargeLimitRequest)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(createChargeLimitRequest.CustomerId.Value);
+        var customerExistsResult = await _customerClient
+            .CustomerExistsAsync(createChargeLimitRequest.CustomerId!.Value);
+
+        if (!customerExistsResult.IsSuccess)
+        {
+            return ServiceResult<CreateChargeLimitResponse?>
+                .Failure(Errors.CustomerClientError);
+        }
         
-        if(!customerExists)
+        if(customerExistsResult.Data == false)
         {
             return ServiceResult<CreateChargeLimitResponse?>
                 .Failure(Errors.CustomerNotExistError);
         }
-        else
+        
+        ChargeLimit? chargeLimit = 
+            await _context.ChargeLimits.FindAsync(createChargeLimitRequest.CustomerId);
+        
+        //if limits already exist for this customer
+        if ( chargeLimit != null)
         {
-            ChargeLimit? chargeLimit = 
-                await _context.ChargeLimits.FindAsync(createChargeLimitRequest.CustomerId);
-            
-            //if limits already exist for this customer
-            if ( chargeLimit != null)
-            {
-                return ServiceResult<CreateChargeLimitResponse?>
-                    .Failure(Errors.LimitAlreadyExistsError);
-            }
-
-            DateTime time = DateTime.UtcNow;
-            
-            var limit = new ChargeLimit
-            {
-                CustomerId = createChargeLimitRequest.CustomerId.Value,
-                AnnualLimit = createChargeLimitRequest.AnnualLimit!.Value,
-                DailyLimit = createChargeLimitRequest.DailyLimit!.Value,
-                MonthlyLimit = createChargeLimitRequest.MonthlyLimit!.Value
-            };
-            
-            var currentLimit = new CurrentChargeLimit
-            {
-                CustomerId = createChargeLimitRequest.CustomerId.Value,
-                AnnualLimit = createChargeLimitRequest.AnnualLimit.Value,
-                DailyLimit = createChargeLimitRequest.DailyLimit.Value,
-                MonthlyLimit = createChargeLimitRequest.MonthlyLimit.Value,
-                LastAnnualReset = time,
-                LastDailyReset = time,
-                LastMonthlyReset = time
-            };
-            
-            _context.ChargeLimits.Add(limit);
-            _context.CurrentChargeLimits.Add(currentLimit);
-            await _context.SaveChangesAsync();
-            
-            CreateChargeLimitResponse response = new CreateChargeLimitResponse
-            {
-                CustomerId = limit.CustomerId,
-                AnnualLimit = limit.AnnualLimit,
-                MonthlyLimit = limit.MonthlyLimit,
-                DailyLimit = limit.DailyLimit,
-                CurrentAnnualLimit = currentLimit.AnnualLimit,
-                CurrentMonthlyLimit = currentLimit.MonthlyLimit,
-                CurrentDailyLimit =  currentLimit.DailyLimit
-            };
-            return ServiceResult<CreateChargeLimitResponse?>.Success(response);
+            return ServiceResult<CreateChargeLimitResponse?>
+                .Failure(Errors.LimitAlreadyExistsError);
         }
+
+        DateTime time = DateTime.UtcNow;
+        
+        var limit = new ChargeLimit
+        {
+            CustomerId = createChargeLimitRequest.CustomerId.Value,
+            AnnualLimit = createChargeLimitRequest.AnnualLimit!.Value,
+            DailyLimit = createChargeLimitRequest.DailyLimit!.Value,
+            MonthlyLimit = createChargeLimitRequest.MonthlyLimit!.Value
+        };
+        
+        var currentLimit = new CurrentChargeLimit
+        {
+            CustomerId = createChargeLimitRequest.CustomerId.Value,
+            AnnualLimit = createChargeLimitRequest.AnnualLimit.Value,
+            DailyLimit = createChargeLimitRequest.DailyLimit.Value,
+            MonthlyLimit = createChargeLimitRequest.MonthlyLimit.Value,
+            LastAnnualReset = time,
+            LastDailyReset = time,
+            LastMonthlyReset = time
+        };
+        
+        _context.ChargeLimits.Add(limit);
+        _context.CurrentChargeLimits.Add(currentLimit);
+        await _context.SaveChangesAsync();
+        
+        CreateChargeLimitResponse response = new CreateChargeLimitResponse
+        {
+            CustomerId = limit.CustomerId,
+            AnnualLimit = limit.AnnualLimit,
+            MonthlyLimit = limit.MonthlyLimit,
+            DailyLimit = limit.DailyLimit,
+            CurrentAnnualLimit = currentLimit.AnnualLimit,
+            CurrentMonthlyLimit = currentLimit.MonthlyLimit,
+            CurrentDailyLimit =  currentLimit.DailyLimit
+        };
+        return ServiceResult<CreateChargeLimitResponse?>.Success(response);
     }
     
-    //don't use
+    /*
+     * Add charge limit function already creates an entry for both of the charge limit tables.
+     * Thus, this function should only be used in special cases.
+     */
     public async Task<ServiceResult<CreateCurrentChargeLimitResponse?>> AddCurrentChargeLimitAsync(
         CreateCurrentChargeLimitRequest createCurrentChargeLimitRequest)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(createCurrentChargeLimitRequest.CustomerId.Value);
+        var customerExistsResult = await _customerClient
+            .CustomerExistsAsync(createCurrentChargeLimitRequest.CustomerId!.Value);
+
+        if (!customerExistsResult.IsSuccess)
+        {
+            return ServiceResult<CreateCurrentChargeLimitResponse?>
+                .Failure(Errors.CustomerClientError);
+        }
         
-        if(!customerExists)
+        if(customerExistsResult.Data == false)
         {
             return ServiceResult<CreateCurrentChargeLimitResponse?>
                 .Failure(Errors.CustomerNotExistError);
         }
-        else
+        
+        var limit = new CurrentChargeLimit
         {
-            var limit = new CurrentChargeLimit
-            {
-                CustomerId = createCurrentChargeLimitRequest.CustomerId.Value,
-                AnnualLimit = 0,
-                DailyLimit = 0,
-                MonthlyLimit = 0
-            };
-            
-            _context.CurrentChargeLimits.Add(limit);
-            await _context.SaveChangesAsync();
-            CreateCurrentChargeLimitResponse response = new CreateCurrentChargeLimitResponse
-            {
-                CustomerId = limit.CustomerId,
-                AnnualLimit = limit.AnnualLimit,
-                MonthlyLimit = limit.MonthlyLimit,
-                DailyLimit = limit.MonthlyLimit
-            };
-            return ServiceResult<CreateCurrentChargeLimitResponse?>.Success(response);
-        }
+            CustomerId = createCurrentChargeLimitRequest.CustomerId.Value,
+            AnnualLimit = 0,
+            DailyLimit = 0,
+            MonthlyLimit = 0
+        };
+        
+        _context.CurrentChargeLimits.Add(limit);
+        await _context.SaveChangesAsync();
+        CreateCurrentChargeLimitResponse response = new CreateCurrentChargeLimitResponse
+        {
+            CustomerId = limit.CustomerId,
+            AnnualLimit = limit.AnnualLimit,
+            MonthlyLimit = limit.MonthlyLimit,
+            DailyLimit = limit.MonthlyLimit
+        };
+        return ServiceResult<CreateCurrentChargeLimitResponse?>.Success(response);
     }
 
     public async Task<bool> DeleteChargeLimitAsync(long customerId)

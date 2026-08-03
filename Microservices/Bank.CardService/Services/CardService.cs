@@ -70,11 +70,19 @@ public class CardService
 
     public async Task<ServiceResult<CreateCardResponse>> CreateCardAndAccountAsync(CreateCardSagaRequest request)
     {
-        bool customerExists = await _customerClient.CustomerExistsAsync(request.CustomerId.Value);
-        if (!customerExists)
+        var customerExistsResult = await _customerClient.CustomerExistsAsync(request.CustomerId.Value);
+        if (!customerExistsResult.IsSuccess)
         {
-            return ServiceResult<CreateCardResponse>.Failure(Errors.CustomerNotExistError);
+            return ServiceResult<CreateCardResponse>
+                .Failure(Errors.CardServiceResponseError);
         }
+
+        if (customerExistsResult.Data == false)
+        {
+            return ServiceResult<CreateCardResponse>
+                .Failure(Errors.CustomerNotFoundError);
+        }
+        
         
         var cardSagaResult = await _createCardSaga.ExecuteAsync(request);
         if (cardSagaResult.IsSuccess == false)

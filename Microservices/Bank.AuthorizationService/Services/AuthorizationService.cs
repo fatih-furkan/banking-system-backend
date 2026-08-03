@@ -273,7 +273,6 @@ public class AuthorizationService
             {
                 AccountNo = accountNo,
                 Balance = accountSaleSagaResult.Data.Balance,
-                CardToken = request.CardNo,
                 ChannelCode = request.ChannelCode.Value,
                 CustomerId = accountSaleSagaResult.Data.CustomerId,
                 Otc = Constants.Otcs.Sale,

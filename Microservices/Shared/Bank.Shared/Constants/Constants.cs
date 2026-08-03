@@ -107,5 +107,10 @@ public class Constants
         public const string AccountClientError = "Account client returned an unexpected status.";
         public const string CardNotFoundError = "Card could not be found.";
         public const string CustomerClientError = "Customer client returned an unexpected status.";
+        public const string AuthorizationClientError = "Authorization client returned an unexpected status.";
+        public const string DepositCompensation = "Deposit failed. Starting compensation.";
+        public const string CustomerServiceResponseError = "Customer service returned an unexpected status.";
+        public const string CardServiceResponseError = "Card service returned an unexpected status.";
+        public const string AccountServiceResponseError = "Account service returned an unexpected status.";
     }
 }

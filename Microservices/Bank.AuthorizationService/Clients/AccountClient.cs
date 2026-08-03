@@ -1,4 +1,5 @@
-﻿using Bank.AuthorizationService.Models.Dtos.ClientDtos;
+﻿using System.Text.Json;
+using Bank.AuthorizationService.Models.Dtos.ClientDtos;
 using Bank.Shared;
 using Bank.Shared.Constants;
 
@@ -15,120 +16,177 @@ public class AccountClient
         _logger = logger;
     }
     
-    public async Task<ServiceResult<AccountSaleResponse>> AccountSaleAsync(AccountSaleRequest request)
+public async Task<ServiceResult<AccountSaleResponse>> AccountSaleAsync(AccountSaleRequest request)
     {
-        
-        using var response =  await _httpClient.PostAsJsonAsync(
-            $"/api/account/sale",
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/account/sale",
             request
         );
-        
+
         if (!response.IsSuccessStatusCode)
         {
             string errorBody =
                 await response.Content.ReadAsStringAsync();
 
-            _logger.LogError(
+            _logger.LogWarning(
                 "Account sale failed. StatusCode: {StatusCode}, Response: {ResponseBody}",
                 response.StatusCode,
                 errorBody
             );
             
             ErrorResponse? errorResponse =
-                await response.Content.ReadFromJsonAsync<ErrorResponse>();
-
-            if (errorResponse?.Error is null)
-            {
-                return ServiceResult<AccountSaleResponse>.Failure(
-                    Errors.AccountSaleError,
-                    (int)response.StatusCode
+                JsonSerializer.Deserialize<ErrorResponse>(
+                    errorBody,
+                    new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    }
                 );
-            }
-            
+
             return ServiceResult<AccountSaleResponse>.Failure(
-                errorResponse.Error,
+                errorResponse?.Error ?? Errors.AccountSaleError,
                 (int)response.StatusCode
             );
         }
 
-        AccountSaleResponse? result =
-            await response.Content.ReadFromJsonAsync<AccountSaleResponse>(
-            );
+        AccountSaleResponse? accountSaleResponse;
 
-        if (result is null)
+        try
+        {
+            accountSaleResponse =
+                await response.Content
+                    .ReadFromJsonAsync<AccountSaleResponse>();
+        }
+        catch (JsonException exception)
         {
             throw new GeneralException(
-                Errors.UnexpectedError
+                Errors.UnexpectedError,
+                StatusCodes.Status502BadGateway
             );
         }
 
-        return ServiceResult<AccountSaleResponse>.Success(result);
+        if (accountSaleResponse is null)
+        {
+            throw new GeneralException(
+                Errors.UnexpectedError,
+                StatusCodes.Status502BadGateway
+            );
+        }
+
+        return ServiceResult<AccountSaleResponse>.Success(
+            accountSaleResponse
+        );
     }
     
-    public async Task<ServiceResult<AccountSaleResponse>> AccountSaleCompensateAsync(
-        AccountSaleRequest request)
+    public async Task<ServiceResult<AccountSaleResponse>>
+        AccountSaleCompensateAsync(AccountSaleRequest request)
     {
-        
-        using var response =  await _httpClient.PostAsJsonAsync(
-            $"/api/account/compensate-sale",
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/account/compensate-sale",
             request
         );
-        
+
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody =
-                await response.Content.ReadAsStringAsync();
+            ErrorResponse? errorResponse = null;
 
-            _logger.LogError(errorBody);
-            
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
             return ServiceResult<AccountSaleResponse>.Failure(
-                Errors.AccountSaleError
+                errorResponse?.Error ?? Errors.AccountSaleError,
+                (int)response.StatusCode
             );
         }
 
-        AccountSaleResponse? result =
-            await response.Content.ReadFromJsonAsync<AccountSaleResponse>(
+        AccountSaleResponse? result;
+
+        try
+        {
+            result =
+                await response.Content
+                    .ReadFromJsonAsync<AccountSaleResponse>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.UnexpectedError,
+                StatusCodes.Status502BadGateway
             );
+        }
 
         if (result is null)
         {
             throw new GeneralException(
-                Errors.UnexpectedError
+                Errors.UnexpectedError,
+                StatusCodes.Status502BadGateway
             );
         }
 
         return ServiceResult<AccountSaleResponse>.Success(result);
     }
     
-    public async Task<ServiceResult<long?>> GetCustomerIdAsync(string accountNo)
+    public async Task<ServiceResult<long?>> GetCustomerIdAsync(
+        string accountNo)
     {
-        
-        using var response =  await _httpClient.GetAsync(
-            $"/api/account/{accountNo}"
+        string encodedAccountNo = Uri.EscapeDataString(accountNo);
+
+        using var response = await _httpClient.GetAsync(
+            $"/api/account/{encodedAccountNo}"
         );
-        
+
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody =
-                await response.Content.ReadAsStringAsync();
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
 
             return ServiceResult<long?>.Failure(
-                Errors.GetAccountError
+                errorResponse?.Error ?? Errors.GetAccountError,
+                (int)response.StatusCode
             );
         }
 
-        GetByAccountNoResponse? result =
-            await response.Content.ReadFromJsonAsync<GetByAccountNoResponse>(
+        GetByAccountNoResponse? result;
+
+        try
+        {
+            result =
+                await response.Content
+                    .ReadFromJsonAsync<GetByAccountNoResponse>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.UnexpectedError,
+                StatusCodes.Status502BadGateway
             );
+        }
 
         if (result is null)
         {
             throw new GeneralException(
-                Errors.UnexpectedError
+                Errors.UnexpectedError,
+                StatusCodes.Status502BadGateway
             );
         }
 
-        return ServiceResult<long?>.Success(result.CustomerId);
+        return ServiceResult<long?>.Success(
+            result.CustomerId
+        );
     }
     
     public async Task<ServiceResult<bool>> AccountExistsAsync(
@@ -142,13 +200,36 @@ public class AccountClient
 
         if (!response.IsSuccessStatusCode)
         {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
             return ServiceResult<bool>.Failure(
-                Errors.AccountClientError,
+                errorResponse?.Error ?? Errors.AccountClientError,
                 (int)response.StatusCode
             );
         }
 
-        bool exists = await response.Content.ReadFromJsonAsync<bool>();
+        bool exists;
+
+        try
+        {
+            exists = await response.Content.ReadFromJsonAsync<bool>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.AccountServiceResponseError,
+                StatusCodes.Status502BadGateway
+            );
+        }
 
         return ServiceResult<bool>.Success(exists);
     }

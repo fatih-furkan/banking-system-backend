@@ -1,4 +1,5 @@
-﻿using Bank.CustomerService.Models.ClientModels;
+﻿using System.Text.Json;
+using Bank.CustomerService.Models.ClientModels;
 using Bank.Shared;
 using Bank.Shared.Constants;
 
@@ -28,31 +29,48 @@ public class AuthorizationClient
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(
-                cancellationToken
-            );
+            ErrorResponse? errorResponse = null;
 
-            _logger.LogWarning(
-                "Limit service failed to create spending limits. " +
-                "StatusCode: {StatusCode}, Response: {ResponseBody}",
-                response.StatusCode,
-                errorBody
-            );
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>(
+                        cancellationToken
+                    );
+            }
+            catch (JsonException)
+            {
+            }
 
             return ServiceResult<CreateSpendingLimitResponse>.Failure(
-                Errors.SpendingLimitCreateError
+                errorResponse?.Error ?? Errors.SpendingLimitCreateError,
+                (int)response.StatusCode
             );
         }
 
-        CreateSpendingLimitResponse? result =
-            await response.Content.ReadFromJsonAsync<CreateSpendingLimitResponse>(
-                cancellationToken
+        CreateSpendingLimitResponse? result;
+
+        try
+        {
+            result =
+                await response.Content
+                    .ReadFromJsonAsync<CreateSpendingLimitResponse>(
+                        cancellationToken
+                    );
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.AuthorizationServiceResponseError,
+                StatusCodes.Status502BadGateway
             );
+        }
 
         if (result is null)
         {
             throw new GeneralException(
-                Errors.UnexpectedError
+                Errors.AuthorizationServiceResponseError,
+                StatusCodes.Status502BadGateway
             );
         }
 
