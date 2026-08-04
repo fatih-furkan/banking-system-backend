@@ -34,7 +34,7 @@ public class AccountSaleSaga
     }
     
     public async Task CompensateAsync(
-        AccountSaleRequest request)
+        CompensateAccountSaleRequest request)
     {
         try
         {

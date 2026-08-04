@@ -251,6 +251,8 @@ public class AuthorizationService
         bool accountSaleMade = false;
         string? authorizationGuid = null;
 
+        Guid operationId = Guid.NewGuid();
+        
         try
         {
             var limitResult =
@@ -335,14 +337,31 @@ public class AuthorizationService
                 request.TransactionId
             );
 
+            var compensateLimitRequest = new CompensateUseSpendingLimitRequest
+            {
+                OperationId = operationId,
+                CustomerId = customerId,
+                Amount = amount
+            };
+            
             await CompensateSaleAsync(
                 accountNo,
                 amount,
-                request.TransactionId,
-                limitRequest,
+                compensateLimitRequest,
                 authorizationGuid,
                 accountSaleMade,
-                spendingLimitUsed
+                spendingLimitUsed,
+                operationId
+            );
+            
+            await CompensateSaleAsync(
+                accountNo,
+                amount,
+                compensateLimitRequest,
+                authorizationGuid,
+                accountSaleMade,
+                spendingLimitUsed,
+                operationId
             );
 
             throw;
@@ -352,34 +371,34 @@ public class AuthorizationService
     private async Task CompensateSaleAsync(
     string accountNo,
     decimal amount,
-    long? transactionId,
-    UseSpendingLimitRequest limitRequest,
+    CompensateUseSpendingLimitRequest limitRequest,
     string? authorizationGuid,
     bool accountSaleMade,
-    bool spendingLimitUsed)
+    bool spendingLimitUsed,
+    Guid operationId)
     {
-        // 1. Compensate authorization first
+       // Reverse order of the original operations.
+
+        // 1. Cancel authorization
         if (authorizationGuid is not null)
         {
             try
             {
-                var authorizationCompensationResult =
-                    await AssignStatusAsync(
-                        new AssignStatusRequest
-                        {
-                            Status = "0"
-                        } ,
-                        authorizationGuid
-                    );
+                var result = await AssignStatusAsync(
+                    new AssignStatusRequest
+                    {
+                        Status = "0"
+                    },
+                    authorizationGuid
+                );
 
-                if (!authorizationCompensationResult.IsSuccess)
+                if (!result.IsSuccess)
                 {
                     _logger.LogError(
                         "Authorization compensation failed. " +
-                        "AuthorizationGuid: {AuthorizationGuid}, " +
-                        "TransactionId: {TransactionId}",
-                        authorizationGuid,
-                        transactionId
+                        "OperationId: {OperationId}, AuthorizationGuid: {AuthorizationGuid}",
+                        operationId,
+                        authorizationGuid
                     );
                 }
             }
@@ -388,37 +407,36 @@ public class AuthorizationService
                 _logger.LogError(
                     exception,
                     "Authorization compensation threw an exception. " +
-                    "AuthorizationGuid: {AuthorizationGuid}, " +
-                    "TransactionId: {TransactionId}",
-                    authorizationGuid,
-                    transactionId
+                    "OperationId: {OperationId}, AuthorizationGuid: {AuthorizationGuid}",
+                    operationId,
+                    authorizationGuid
                 );
             }
         }
 
-        // 2. Refund the amount deducted by AccountService
+        // 2. Restore the balance in AccountService.
+        // AccountService must handle this idempotently using OperationId.
         if (accountSaleMade)
         {
             try
             {
-                var accountCompensationResult =
+                var result =
                     await _accountClient.AccountSaleCompensateAsync(
-                        new AccountSaleRequest
+                        new CompensateAccountSaleRequest
                         {
+                            OperationId = operationId,
                             AccountNo = accountNo,
-                            Amount = amount,
-                            TransactionId = transactionId
+                            Amount = amount
                         }
                     );
 
-                if (!accountCompensationResult.IsSuccess)
+                if (!result.IsSuccess)
                 {
                     _logger.LogError(
                         "Account sale compensation failed. " +
-                        "AccountNo: {AccountNo}, " +
-                        "TransactionId: {TransactionId}",
-                        accountNo,
-                        transactionId
+                        "OperationId: {OperationId}, AccountNo: {AccountNo}",
+                        operationId,
+                        accountNo
                     );
                 }
             }
@@ -427,10 +445,9 @@ public class AuthorizationService
                 _logger.LogError(
                     exception,
                     "Account sale compensation threw an exception. " +
-                    "AccountNo: {AccountNo}, " +
-                    "TransactionId: {TransactionId}",
-                    accountNo,
-                    transactionId
+                    "OperationId: {OperationId}, AccountNo: {AccountNo}",
+                    operationId,
+                    accountNo
                 );
             }
         }
@@ -440,17 +457,33 @@ public class AuthorizationService
         {
             try
             {
-                await _spendingLimitSaga.CompensateAsync(limitRequest);
+                var result = await _spendingLimitSaga.CompensateAsync(
+                    new CompensateUseSpendingLimitRequest
+                    {
+                        OperationId = operationId,
+                        CustomerId = limitRequest.CustomerId,
+                        Amount = limitRequest.Amount
+                    }
+                );
+
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Spending limit compensation failed. " +
+                        "OperationId: {OperationId}, CustomerId: {CustomerId}",
+                        operationId,
+                        limitRequest.CustomerId
+                    );
+                }
             }
             catch (Exception exception)
             {
                 _logger.LogError(
                     exception,
                     "Spending limit compensation threw an exception. " +
-                    "CustomerId: {CustomerId}, " +
-                    "TransactionId: {TransactionId}",
-                    limitRequest.CustomerId,
-                    transactionId
+                    "OperationId: {OperationId}, CustomerId: {CustomerId}",
+                    operationId,
+                    limitRequest.CustomerId
                 );
             }
         }

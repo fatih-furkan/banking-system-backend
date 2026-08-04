@@ -112,9 +112,9 @@ public class ChargeLimitController : Controller
     }
 
     [HttpPost("compensate-use-charge-limit")]
-    public async Task<IActionResult> CompensateUseChargeLimit(UseChargeLimitRequest useChargeLimitRequest)
+    public async Task<IActionResult> CompensateUseChargeLimit(CompensateUseChargeLimitRequest request)
     {
-        var result = await _chargeLimitService.CompensateUseChargeLimitAsync(useChargeLimitRequest);
+        var result = await _chargeLimitService.CompensateUseChargeLimitAsync(request);
         if (!result.IsSuccess)
         {
             return StatusCode(result.StatusCode, new ErrorResponse(result.Error));

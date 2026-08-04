@@ -112,5 +112,27 @@ public class Constants
         public const string CustomerServiceResponseError = "Customer service returned an unexpected status.";
         public const string CardServiceResponseError = "Card service returned an unexpected status.";
         public const string AccountServiceResponseError = "Account service returned an unexpected status.";
+        public const string ChargeLimitCompensateError = "Charge limit compensation is failed.";
+    }
+    
+    public static class CompensationOperationTypes
+    {
+        public const string ReverseDepositBalance =
+            "REVERSE_DEPOSIT_BALANCE";
+
+        public const string RestoreWithdrawBalance =
+            "RESTORE_WITHDRAW_BALANCE";
+
+        public const string RestoreSaleBalance =
+            "RESTORE_SALE_BALANCE";
+
+        public const string RestoreChargeLimit =
+            "RESTORE_CHARGE_LIMIT";
+
+        public const string RestoreSpendingLimit =
+            "RESTORE_SPENDING_LIMIT";
+
+        public const string CancelAuthorization =
+            "CANCEL_AUTHORIZATION";
     }
 }

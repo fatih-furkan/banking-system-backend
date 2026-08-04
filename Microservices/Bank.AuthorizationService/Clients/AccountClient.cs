@@ -79,7 +79,7 @@ public async Task<ServiceResult<AccountSaleResponse>> AccountSaleAsync(AccountSa
     }
     
     public async Task<ServiceResult<AccountSaleResponse>>
-        AccountSaleCompensateAsync(AccountSaleRequest request)
+        AccountSaleCompensateAsync(CompensateAccountSaleRequest request)
     {
         using var response = await _httpClient.PostAsJsonAsync(
             "/api/account/compensate-sale",

@@ -279,4 +279,9 @@ public static class Errors
         new(
             ErrorCode.AccountServiceResponseErr,
             Constants.ExceptionMessages.AccountServiceResponseError);
+    
+    public static readonly Error ChargeLimitCompensateError =
+        new(
+            ErrorCode.ChargeLimitCompensateErr,
+            Constants.ExceptionMessages.ChargeLimitCompensateError);
 }

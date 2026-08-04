@@ -146,7 +146,7 @@ public class SpendingLimitController : ControllerBase
 
     [HttpPost("compensate-use-spending-limit")]
     public async Task<IActionResult> CompensateUseSpendingLimit(
-        UseSpendingLimitRequest request)
+        CompensateUseSpendingLimitRequest request)
     {
         var result =
             await _spendingLimitService

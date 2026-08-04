@@ -38,24 +38,14 @@ public class SpendingLimitSaga
         );
     }
 
-    public async Task CompensateAsync(
-        UseSpendingLimitRequest request)
+    public async Task<ServiceResult<Unit>> CompensateAsync(
+        CompensateUseSpendingLimitRequest request)
     {
         try
         {
-            var result =
-                await _spendingLimitService
+            return await _spendingLimitService
                     .CompensateUseSpendingLimitAsync(request);
-
-            if (!result.IsSuccess)
-            {
-                _logger.LogError(
-                    "Spending limit compensation failed. " +
-                    "CustomerId: {CustomerId}, Error: {Error}",
-                    request.CustomerId,
-                    result.Error
-                );
-            }
+            
         }
         catch (Exception exception)
         {
@@ -64,6 +54,8 @@ public class SpendingLimitSaga
                 Constants.ExceptionMessages
                     .SpendingLimitCompensationError
             );
+
+            throw;
         }
     }
 }

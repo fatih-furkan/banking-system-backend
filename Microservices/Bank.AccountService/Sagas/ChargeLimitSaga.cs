@@ -33,20 +33,11 @@ public class ChargeLimitSaga
     }
 
 
-    public async Task CompensateAsync(UseChargeLimitRequest request)
+    public async Task<ServiceResult<Unit>> CompensateAsync(CompensateUseChargeLimitRequest request)
     {
-        try
-        {
-            await _chargeLimitService.CompensateUseChargeLimitAsync(
-                request
-            );
-        }
-        catch (Exception exception)
-        {
-            _logger.LogError(
-                exception,
-                Constants.ExceptionMessages.ChargeLimitCompensationError
-            );
-        }
+        var result = await _chargeLimitService.CompensateUseChargeLimitAsync(
+            request
+        );
+        return result;
     }
 }

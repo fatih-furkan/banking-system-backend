@@ -56,5 +56,6 @@ public enum ErrorCode
     AuthorizationClientErr,
     CustomerServiceResponseErr,
     CardServiceResponseErr,
-    AccountServiceResponseErr
+    AccountServiceResponseErr,
+    ChargeLimitCompensateErr
 }

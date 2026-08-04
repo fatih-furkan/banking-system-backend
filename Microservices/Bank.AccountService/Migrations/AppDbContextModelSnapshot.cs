@@ -59,6 +59,26 @@ namespace Bank.AccountService.Migrations
                     b.ToTable("ACCOUNT", (string)null);
                 });
 
+            modelBuilder.Entity("Bank.AccountService.Models.Entities.Account.CompletedSagaOperation", b =>
+                {
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("RAW(16)")
+                        .HasColumnName("OPERATION_ID");
+
+                    b.Property<string>("OperationType")
+                        .HasMaxLength(50)
+                        .HasColumnType("NVARCHAR2(50)")
+                        .HasColumnName("OPERATION_TYPE");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("TIMESTAMP(7)")
+                        .HasColumnName("COMPLETED_AT");
+
+                    b.HasKey("OperationId", "OperationType");
+
+                    b.ToTable("COMPLETED_SAGA_OPERATIONS", (string)null);
+                });
+
             modelBuilder.Entity("Bank.AccountService.Models.Entities.Limit.ChargeLimit", b =>
                 {
                     b.Property<long>("CustomerId")

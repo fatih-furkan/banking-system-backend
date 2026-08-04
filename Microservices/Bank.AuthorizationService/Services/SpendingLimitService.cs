@@ -236,60 +236,63 @@ public class SpendingLimitService
         else return ServiceResult<UseSpendingLimitResponse>.Failure(Errors.AccountNotFoundError);
     }
     
-    public async Task<ServiceResult<CompensateUseSpendingLimitResponse>> CompensateUseSpendingLimitAsync(UseSpendingLimitRequest request)
+    public async Task<ServiceResult<Unit>> CompensateUseSpendingLimitAsync(
+        CompensateUseSpendingLimitRequest request)
     {
-        
-        if (decimal.Round(request.Amount.Value, 2) != request.Amount)
+        const string operationType =
+            Constants.CompensationOperationTypes.RestoreSpendingLimit;
+
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        bool alreadyCompleted =
+            await _context.CompletedSagaOperations.AnyAsync(operation =>
+                operation.OperationId == request.OperationId &&
+                operation.OperationType == operationType
+            );
+
+        if (alreadyCompleted)
         {
-            return ServiceResult<CompensateUseSpendingLimitResponse>.Failure(
-                Errors.PrecisionError, 403);
+            return ServiceResult<Unit>.Success(new Unit());
         }
 
-        if (request.Amount < 0)
-        {
-            return ServiceResult<CompensateUseSpendingLimitResponse>.Failure(
-                Errors.NegativeAmountError, 403);
-        }
-
-        await _context.SaveChangesAsync();
-        
         int affectedRows = await _context.CurrentSpendingLimits
-            .Where(limit =>
-                limit.CustomerId == request.CustomerId)
+            .Where(limit => limit.CustomerId == request.CustomerId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(
                     limit => limit.DailyLimit,
-                    limit => limit.DailyLimit + request.Amount)
+                    limit => limit.DailyLimit + request.Amount
+                )
                 .SetProperty(
                     limit => limit.MonthlyLimit,
-                    limit => limit.MonthlyLimit + request.Amount)
+                    limit => limit.MonthlyLimit + request.Amount
+                )
                 .SetProperty(
                     limit => limit.AnnualLimit,
-                    limit => limit.AnnualLimit + request.Amount)
+                    limit => limit.AnnualLimit + request.Amount
+                )
             );
-        
+
         if (affectedRows == 0)
         {
-            return ServiceResult<CompensateUseSpendingLimitResponse>.Failure(Errors.CustomerNotExistError);
+            return ServiceResult<Unit>.Failure(
+                Errors.LimitNotFoundError,
+                StatusCodes.Status404NotFound
+            );
         }
-        
-        var limit = await _context.CurrentSpendingLimits
-            .AsNoTracking()
-            .FirstOrDefaultAsync
-            (limit => limit.CustomerId == request.CustomerId);
 
-        if (limit != null)
-        {
-            var response = new CompensateUseSpendingLimitResponse
+        _context.CompletedSagaOperations.Add(
+            new CompletedSagaOperation
             {
-                CustomerId = limit.CustomerId,
-                TransactionAmount = request.Amount,
-                TransactionTime = DateTime.UtcNow
-            };
-            
-            return ServiceResult<CompensateUseSpendingLimitResponse>.Success(response);
-        }
-        
-        else return ServiceResult<CompensateUseSpendingLimitResponse>.Failure(Errors.AccountNotFoundError);
+                OperationId = request.OperationId.Value,
+                OperationType = operationType,
+                CompletedAt = DateTime.UtcNow
+            }
+        );
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        return ServiceResult<Unit>.Success(new Unit());
     }
 }

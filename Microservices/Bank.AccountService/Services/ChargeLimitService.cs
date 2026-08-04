@@ -1,6 +1,7 @@
 ﻿using Bank.AccountService.Clients;
 using Bank.AccountService.Data;
 using Bank.AccountService.Models.Dtos.Limit;
+using Bank.AccountService.Models.Entities.Account;
 using Bank.AccountService.Models.Entities.Limit;
 using Bank.Shared;
 using Bank.Shared.Constants;
@@ -277,60 +278,62 @@ public class ChargeLimitService
         else return ServiceResult<UseChargeLimitResponse>.Failure(Errors.AccountNotFoundError);
     }
     
-    public async Task<ServiceResult<CompensateUseChargeLimitResponse>> CompensateUseChargeLimitAsync(UseChargeLimitRequest request)
+    public async Task<ServiceResult<Unit>> CompensateUseChargeLimitAsync(
+        CompensateUseChargeLimitRequest request)
     {
-        
-        if (decimal.Round(request.Amount.Value, 2) != request.Amount)
+        const string operationType =
+            Constants.CompensationOperationTypes
+                .RestoreChargeLimit;
+
+        bool alreadyCompleted =
+            await _context.CompletedSagaOperations.AnyAsync(
+                operation =>
+                    operation.OperationId == request.OperationId &&
+                    operation.OperationType == operationType
+            );
+
+        if (alreadyCompleted)
         {
-            return ServiceResult<CompensateUseChargeLimitResponse>.Failure(
-                Errors.PrecisionError, 403);
+            return ServiceResult<Unit>.Success(new Unit());
         }
 
-        if (request.Amount < 0)
-        {
-            return ServiceResult<CompensateUseChargeLimitResponse>.Failure(
-                Errors.NegativeAmountError, 403);
-        }
-
-        await _context.SaveChangesAsync();
-        
         int affectedRows = await _context.CurrentChargeLimits
             .Where(limit =>
                 limit.CustomerId == request.CustomerId)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(
                     limit => limit.DailyLimit,
-                    limit => limit.DailyLimit + request.Amount)
+                    limit => limit.DailyLimit + request.Amount
+                )
                 .SetProperty(
                     limit => limit.MonthlyLimit,
-                    limit => limit.MonthlyLimit + request.Amount)
+                    limit => limit.MonthlyLimit + request.Amount
+                )
                 .SetProperty(
                     limit => limit.AnnualLimit,
-                    limit => limit.AnnualLimit + request.Amount)
+                    limit => limit.AnnualLimit + request.Amount
+                )
             );
 
         if (affectedRows == 0)
         {
-            return ServiceResult<CompensateUseChargeLimitResponse>.Failure(Errors.CustomerNotExistError);
+            return ServiceResult<Unit>.Failure(
+                Errors.LimitNotFoundError,
+                StatusCodes.Status404NotFound
+            );
         }
-        
-        var limit = await _context.CurrentChargeLimits
-            .AsNoTracking()
-            .FirstOrDefaultAsync
-            (limit => limit.CustomerId == request.CustomerId);
 
-        if (limit != null)
-        {
-            var response = new CompensateUseChargeLimitResponse
+        _context.CompletedSagaOperations.Add(
+            new CompletedSagaOperation
             {
-                CustomerId = limit.CustomerId,
-                TransactionAmount = request.Amount,
-                TransactionTime = DateTime.UtcNow
-            };
-            
-            return ServiceResult<CompensateUseChargeLimitResponse>.Success(response);
-        }
-        
-        else return ServiceResult<CompensateUseChargeLimitResponse>.Failure(Errors.AccountNotFoundError);
+                OperationId = request.OperationId,
+                OperationType = operationType,
+                CompletedAt = DateTime.UtcNow
+            }
+        );
+
+        await _context.SaveChangesAsync();
+
+        return ServiceResult<Unit>.Success(new Unit());
     }
 }

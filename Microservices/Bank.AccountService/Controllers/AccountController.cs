@@ -138,7 +138,7 @@ public class AccountController: ControllerBase
     }
     
     [HttpPost("compensate-sale")]
-    public async Task<IActionResult> CompensateSale(SaleRequest request)
+    public async Task<IActionResult> CompensateSale(CompensateSaleRequest request)
     {
         var result = await _accountService.CompensateSaleAsync(request);
         if (!result.IsSuccess)
