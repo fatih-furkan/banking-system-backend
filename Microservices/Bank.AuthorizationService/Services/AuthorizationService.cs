@@ -353,16 +353,6 @@ public class AuthorizationService
                 spendingLimitUsed,
                 operationId
             );
-            
-            await CompensateSaleAsync(
-                accountNo,
-                amount,
-                compensateLimitRequest,
-                authorizationGuid,
-                accountSaleMade,
-                spendingLimitUsed,
-                operationId
-            );
 
             throw;
         }
