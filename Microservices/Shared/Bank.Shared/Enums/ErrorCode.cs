@@ -57,5 +57,13 @@ public enum ErrorCode
     CustomerServiceResponseErr,
     CardServiceResponseErr,
     AccountServiceResponseErr,
-    ChargeLimitCompensateErr
+    ChargeLimitCompensateErr,
+    AccountRefundErr,
+    InvalidRefundTypeErr,
+    TransactionNotExistErr,
+    AmountRefundTypeMismatchErr,
+    AuthorizationNotFoundErr,
+    AssignStatusErr,
+    TransactionAlreadyRefundedErr,
+    AccountRefundCompensationErr,
 }

@@ -8,9 +8,9 @@ namespace Bank.CustomerService.Clients;
 public class AuthorizationClient
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<AccountClient> _logger;
+    private readonly ILogger<AuthorizationClient> _logger;
 
-    public AuthorizationClient(HttpClient httpClient, ILogger<AccountClient> logger)
+    public AuthorizationClient(HttpClient httpClient, ILogger<AuthorizationClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;

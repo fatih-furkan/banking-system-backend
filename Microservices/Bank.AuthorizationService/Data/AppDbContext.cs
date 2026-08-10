@@ -70,7 +70,7 @@ public class AppDbContext: DbContext
             entity.Property(x => x.ChannelCode)
                 .HasConversion(
                     value => value.ToDatabaseCode(),
-                    value => ChannelCodeExtentions.FromDatabaseCode(value)
+                    value => ChannelCodeExtensions.FromDatabaseCode(value)
                 )
                 .HasColumnName("CHANNEL_CODE")
                 .HasMaxLength(3)

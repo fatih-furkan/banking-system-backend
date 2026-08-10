@@ -657,6 +657,39 @@ public class AccountService
         return ServiceResult<SaleResponse>.Success(response);
     }
     
+    //should be called from authorization microservice
+    public async Task<ServiceResult<RefundResponse>> RefundAsync(RefundRequest request)
+    {
+        int affectedRows =
+            await _context.Accounts
+                .Where(account => account.AccountNo == request.AccountNo)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(account => account.Balance,
+                        account => account.Balance + request.Amount)
+                );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<RefundResponse>.Failure(Errors.AccountNotFoundError);
+        }
+        
+        var account = await _context.Accounts.FirstOrDefaultAsync
+            (account => account.AccountNo == request.AccountNo);
+
+        if (account == null)
+        {
+            return ServiceResult<RefundResponse>.Failure(Errors.UnexpectedError);
+        }
+        
+        RefundResponse response = new RefundResponse
+        {
+            TransactionId = request.TransactionId!.Value,
+            Balance = account.Balance,
+            CustomerId = account.CustomerId
+        };
+        return ServiceResult<RefundResponse>.Success(response);
+    }
+    
     private async Task<long> GetNextAccountNoSequenceValueAsync()
     {
         var connection = _context.Database.GetDbConnection();
@@ -1038,6 +1071,88 @@ public class AccountService
 
         return ServiceResult<SaleResponse>.Success(
             new SaleResponse
+            {
+                Balance = account.Balance,
+                CustomerId = account.CustomerId
+            }
+        );
+    }
+    
+    public async Task<ServiceResult<RefundResponse>>
+        CompensateRefundAsync(CompensateRefundRequest request)
+    {
+        const string operationType =
+            Constants.CompensationOperationTypes.RestoreRefundBalance;
+
+        await using var transaction =
+            await _context.Database.BeginTransactionAsync();
+
+        bool alreadyCompleted =
+            await _context.CompletedSagaOperations.AnyAsync(operation =>
+                operation.OperationId == request.OperationId &&
+                operation.OperationType == operationType
+            );
+
+        if (alreadyCompleted)
+        {
+            var existingAccount = await _context.Accounts
+                .AsNoTracking()
+                .SingleOrDefaultAsync(account =>
+                    account.AccountNo == request.AccountNo);
+
+            if (existingAccount is null)
+            {
+                return ServiceResult<RefundResponse>.Failure(
+                    Errors.AccountNotFoundError,
+                    StatusCodes.Status404NotFound
+                );
+            }
+
+            return ServiceResult<RefundResponse>.Success(
+                new RefundResponse
+                {
+                    Balance = existingAccount.Balance,
+                    CustomerId = existingAccount.CustomerId
+                }
+            );
+        }
+
+        int affectedRows = await _context.Accounts
+            .Where(account => account.AccountNo == request.AccountNo)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    account => account.Balance,
+                    account => account.Balance - request.Amount
+                )
+            );
+
+        if (affectedRows == 0)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                Errors.AccountNotFoundError,
+                StatusCodes.Status404NotFound
+            );
+        }
+
+        _context.CompletedSagaOperations.Add(
+            new CompletedSagaOperation
+            {
+                OperationId = request.OperationId.Value,
+                OperationType = operationType,
+                CompletedAt = DateTime.UtcNow
+            }
+        );
+
+        await _context.SaveChangesAsync();
+        await transaction.CommitAsync();
+
+        var account = await _context.Accounts
+            .AsNoTracking()
+            .SingleAsync(account =>
+                account.AccountNo == request.AccountNo);
+
+        return ServiceResult<RefundResponse>.Success(
+            new RefundResponse
             {
                 Balance = account.Balance,
                 CustomerId = account.CustomerId

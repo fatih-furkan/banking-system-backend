@@ -67,4 +67,17 @@ public class AuthorizationController : ControllerBase
 
         return Ok(result.Data);
     }
+    
+    [HttpPost("refund")]
+    public async Task<IActionResult> Refund(RefundRequest request)
+    {
+        var result = await _authorizationService.RefundAsync(request);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(403, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
 }

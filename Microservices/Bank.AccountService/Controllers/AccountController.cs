@@ -137,10 +137,34 @@ public class AccountController: ControllerBase
         return Ok(result.Data);
     }
     
+    [HttpPost("refund")]
+    public async Task<IActionResult> Refund(RefundRequest request)
+    {
+        var result = await _accountService.RefundAsync(request);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(403, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
+    
     [HttpPost("compensate-sale")]
     public async Task<IActionResult> CompensateSale(CompensateSaleRequest request)
     {
         var result = await _accountService.CompensateSaleAsync(request);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(403, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
+    
+    [HttpPost("compensate-refund")]
+    public async Task<IActionResult> CompensateRefund(CompensateRefundRequest request)
+    {
+        var result = await _accountService.CompensateRefundAsync(request);
         if (!result.IsSuccess)
         {
             return StatusCode(403, new ErrorResponse(result.Error));

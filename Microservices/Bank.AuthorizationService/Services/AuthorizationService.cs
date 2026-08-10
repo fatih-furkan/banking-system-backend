@@ -21,6 +21,7 @@ public class AuthorizationService
     private readonly CustomerClient _customerClient;
     private readonly SpendingLimitSaga _spendingLimitSaga;
     private readonly AccountSaleSaga _accountSaleSaga;
+    private readonly AccountRefundSaga _accountRefundSaga;
     private readonly ILogger<AuthorizationService> _logger;
     
     public AuthorizationService(AppDbContext context, 
@@ -28,6 +29,7 @@ public class AuthorizationService
         AccountClient accountClient,
         SpendingLimitSaga spendingLimitSaga,
         AccountSaleSaga accountSaleSaga,
+        AccountRefundSaga accountRefundSaga,
         ILogger<AuthorizationService> logger,
         CustomerClient customerClient)
     {
@@ -37,6 +39,7 @@ public class AuthorizationService
         _customerClient = customerClient;
         _spendingLimitSaga = spendingLimitSaga;
         _accountSaleSaga = accountSaleSaga;
+        _accountRefundSaga = accountRefundSaga;
         _logger = logger;
     }
     
@@ -202,8 +205,7 @@ public class AuthorizationService
             );
         }
 
-        if (request.ChannelCode != ChannelCode.Fast &&
-            request.ChannelCode != ChannelCode.Online &&
+        if (request.ChannelCode != ChannelCode.Online &&
             request.ChannelCode != ChannelCode.Pos)
         {
             return ServiceResult<SaleResponse>.Failure(
@@ -404,8 +406,7 @@ public class AuthorizationService
             }
         }
 
-        // 2. Restore the balance in AccountService.
-        // AccountService must handle this idempotently using OperationId.
+        // 2. Restore the balance in AccountService. .
         if (accountSaleMade)
         {
             try
@@ -479,6 +480,304 @@ public class AuthorizationService
         }
     }
     
+    public async Task<ServiceResult<RefundResponse>> RefundAsync(
+    RefundRequest request)
+    {
+        decimal amount = request.Amount!.Value;
+
+        if (decimal.Round(amount, 2) != amount)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                Errors.PrecisionError,
+                StatusCodes.Status400BadRequest
+            );
+        }
+
+        if (amount <= 0)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                Errors.NegativeAmountError,
+                StatusCodes.Status400BadRequest
+            );
+        }
+        
+        Authorization? theAuthorization = await _context.Authorizations
+            .SingleOrDefaultAsync(a => a.TransactionId == request.SaleTransactionId);
+
+        if (theAuthorization == null)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                Errors.TransactionNotExistError,
+                StatusCodes.Status400BadRequest
+            );
+        }
+        
+        if (request.RefundType == RefundType.Complete)
+        {
+            if (theAuthorization.TransactionAmount != amount)
+            {
+                return ServiceResult<RefundResponse>.Failure(
+                    Errors.AmountRefundTypeMismatchError);
+            }
+        }
+
+        else
+        {
+            if (theAuthorization.TransactionAmount <= amount)
+            {
+                return ServiceResult<RefundResponse>.Failure(
+                    Errors.AmountRefundTypeMismatchError);
+            }
+        }
+        
+        //refund nerelerden gelebilir???
+        if (request.ChannelCode != ChannelCode.Online &&
+            request.ChannelCode != ChannelCode.Pos)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                Errors.UnauthorizedChannelError,
+                StatusCodes.Status403Forbidden
+            );
+        }
+
+        var accountNoResult =
+            await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
+
+        if (!accountNoResult.IsSuccess ||
+            string.IsNullOrWhiteSpace(accountNoResult.Data))
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                accountNoResult.Error ?? Errors.AccountNotFoundError,
+                accountNoResult.StatusCode
+            );
+        }
+
+        string accountNo = accountNoResult.Data;
+
+        var customerIdResult =
+            await _accountClient.GetCustomerIdAsync(accountNo);
+
+        if (!customerIdResult.IsSuccess ||
+            customerIdResult.Data is null)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                customerIdResult.Error ?? Errors.CustomerNotFoundError,
+                customerIdResult.StatusCode
+            );
+        }
+
+        long customerId = customerIdResult.Data.Value;
+        
+        bool accountRefundMade = false;
+        string? authorizationGuid = null;
+
+        Guid operationId = Guid.NewGuid();
+        
+        try
+        {
+
+            var accountRefundRequest = new AccountRefundRequest
+            {
+                AccountNo = accountNo,
+                Amount = amount,
+                TransactionId = request.TransactionId
+            };
+
+            var accountRefundSagaResult = await _accountRefundSaga.ExecuteAsync(accountRefundRequest);
+            if (!accountRefundSagaResult.IsSuccess || accountRefundSagaResult.Data == null)
+            {
+                throw new GeneralException(
+                    accountRefundSagaResult.Error ?? Errors.AccountSaleError,
+                    accountRefundSagaResult.StatusCode
+                );
+            }
+            
+            accountRefundMade = true;
+
+            await using var transaction =
+                await _context.Database.BeginTransactionAsync();
+            
+            
+            int affectedRows = await _context.Authorizations
+                .Where(authorization =>
+                    authorization.TransactionId == request.SaleTransactionId &&
+                    authorization.TransactionStatus ==
+                    "1")
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(
+                        authorization => authorization.TransactionStatus,
+                        "0"
+                    )
+                );
+
+            if (affectedRows == 0)
+            {
+                throw new GeneralException(
+                    Errors.TransactionAlreadyRefundedError,
+                    StatusCodes.Status409Conflict
+                );
+            }
+            
+            var authorizationRequest = new CreateAuthorizationRequest
+            {
+                AccountNo = accountNo,
+                Balance = accountRefundSagaResult.Data.Balance,
+                ChannelCode = request.ChannelCode.Value,
+                CustomerId = accountRefundSagaResult.Data.CustomerId,
+                Otc = Constants.Otcs.Refund,
+                Ots = request.RefundType == RefundType.Complete ? 
+                    Constants.Ots.RefundOts.Complete : Constants.Ots.RefundOts.Partial,
+                TransactionAmount = amount,
+                TransactionDescription = "Refund",
+                TransactionStatus = "1",
+                TransactionId = request.TransactionId
+            };
+
+            var authorizationResult =
+                await CreateAuthorizationAsync(authorizationRequest);
+
+            if (!authorizationResult.IsSuccess ||
+                authorizationResult.Data is null)
+            {
+                throw new GeneralException(
+                    authorizationResult.Error ??
+                    Errors.AuthorizationCreateError,
+                    authorizationResult.StatusCode
+                );
+            }
+            
+            await transaction.CommitAsync();
+
+            authorizationGuid = authorizationResult.Data.Guid;
+            
+            return ServiceResult<RefundResponse>.Success(
+                new RefundResponse
+                {
+                    Balance = accountRefundSagaResult.Data.Balance,
+                    TransactionAmount = amount,
+                    TransactionTime =
+                        authorizationResult.Data.TransactionDate
+                }
+            );
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Refund failed. Starting compensation. " +
+                "AccountNo: {AccountNo}, CardNo: {CardNo}, " +
+                "TransactionId: {TransactionId}",
+                accountNo,
+                request.CardNo,
+                request.TransactionId
+            );
+            
+            await CompensateRefundAsync(
+                accountNo,
+                amount,
+                authorizationGuid,
+                accountRefundMade,
+                operationId,
+                request.SaleTransactionId!.Value
+            );
+
+            throw;
+        }
+    }
+
+    private async Task CompensateRefundAsync(
+        string accountNo,
+        decimal amount,
+        string? authorizationGuid,
+        bool accountRefundMade,
+        Guid operationId,
+        long saleTransactionId)
+    {
+
+        // 1. Cancel authorization
+        if (authorizationGuid is not null)
+        {
+            try
+            {
+                await using var transaction =
+                    await _context.Database.BeginTransactionAsync();
+                
+                var newEntryResult = await AssignStatusAsync(
+                    new AssignStatusRequest
+                    {
+                        Status = "0"
+                    },
+                    authorizationGuid
+                );
+
+                var oldEntryResult = await AssignStatusWithTrxnIdAsync(
+                    new AssignStatusRequest
+                    {
+                        Status = "1"
+                    },
+                    saleTransactionId
+                );
+                
+                if (!newEntryResult.IsSuccess || !oldEntryResult.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Authorization compensation failed. " +
+                        "OperationId: {OperationId}, AuthorizationGuid: {AuthorizationGuid}",
+                        operationId,
+                        authorizationGuid
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Authorization compensation threw an exception. " +
+                    "OperationId: {OperationId}, AuthorizationGuid: {AuthorizationGuid}",
+                    operationId,
+                    authorizationGuid
+                );
+            }
+        }
+
+        // 2. Restore the balance in AccountService.
+        if (accountRefundMade)
+        {
+            try
+            {
+                var result =
+                    await _accountClient.AccountRefundCompensateAsync(
+                        new CompensateAccountRefundRequest
+                        {
+                            OperationId = operationId,
+                            AccountNo = accountNo,
+                            Amount = amount
+                        }
+                    );
+
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Account sale compensation failed. " +
+                        "OperationId: {OperationId}, AccountNo: {AccountNo}",
+                        operationId,
+                        accountNo
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Account sale compensation threw an exception. " +
+                    "OperationId: {OperationId}, AccountNo: {AccountNo}",
+                    operationId,
+                    accountNo
+                );
+            }
+        }
+    }
+    
     private static bool IsDuplicateTransactionId(
         DbUpdateException exception)
     {
@@ -509,5 +808,29 @@ public class AuthorizationService
         }
 
         return null;
+    }
+    
+    private async Task<ServiceResult<Unit>> AssignStatusWithTrxnIdAsync(AssignStatusRequest request, long transactionId)
+    {
+        bool isOnlyDigits =
+            !string.IsNullOrEmpty(request.Status) &&
+            request.Status.All(c => c is >= '0' and <= '9');
+        
+        if (!isOnlyDigits)
+        {
+            return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
+        }
+        
+        var auth = await _context.Authorizations
+            .SingleOrDefaultAsync(auth => auth.TransactionId == transactionId);
+        
+        if (auth == null)
+        {
+            return ServiceResult<Unit>.Failure(Errors.AuthorizationNotFoundError);
+        }
+        
+        auth.TransactionStatus = request.Status;
+        await _context.SaveChangesAsync();
+        return ServiceResult<Unit>.Success(new Unit());
     }
 }

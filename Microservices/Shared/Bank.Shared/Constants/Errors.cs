@@ -284,4 +284,44 @@ public static class Errors
         new(
             ErrorCode.ChargeLimitCompensateErr,
             Constants.ExceptionMessages.ChargeLimitCompensateError);
+    
+    public static readonly Error AccountRefundError =
+        new(
+            ErrorCode.AccountRefundErr,
+            Constants.ExceptionMessages.AccountRefundError);
+    
+    public static readonly Error InvalidRefundTypeError =
+        new(
+            ErrorCode.InvalidRefundTypeErr,
+            Constants.ExceptionMessages.InvalidRefundTypeError);
+    
+    public static readonly Error TransactionNotExistError =
+        new(
+            ErrorCode.TransactionNotExistErr,
+            Constants.ExceptionMessages.TransactionNotExistError);
+    
+    public static readonly Error AmountRefundTypeMismatchError =
+        new(
+            ErrorCode.AmountRefundTypeMismatchErr,
+            Constants.ExceptionMessages.AmountRefundTypeMismatchError);
+    
+    public static readonly Error AuthorizationNotFoundError =
+        new(
+            ErrorCode.AuthorizationNotFoundErr,
+            Constants.ExceptionMessages.AuthorizationNotFoundError);
+    
+    public static readonly Error AssignStatusError =
+        new(
+            ErrorCode.AssignStatusErr,
+            Constants.ExceptionMessages.AssignStatusError);
+    
+    public static readonly Error TransactionAlreadyRefundedError =
+        new(
+            ErrorCode.TransactionAlreadyRefundedErr,
+            Constants.ExceptionMessages.TransactionAlreadyRefundedError);
+    
+    public static readonly Error AccountRefundCompensationError =
+        new(
+            ErrorCode.AccountRefundCompensationErr,
+            Constants.ExceptionMessages.AccountRefundCompensationError);
 }

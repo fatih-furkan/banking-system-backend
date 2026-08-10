@@ -1,12 +1,12 @@
-﻿namespace Bank.Shared.Enums;
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-public sealed class ChannelCodeJsonConverter
-    : JsonConverter<ChannelCode>
+namespace Bank.Shared.Enums;
+
+public sealed class RefundTypeJsonConverter
+    : JsonConverter<RefundType>
 {
-    public override ChannelCode Read(
+    public override RefundType Read(
         ref Utf8JsonReader reader,
         Type typeToConvert,
         JsonSerializerOptions options)
@@ -14,21 +14,21 @@ public sealed class ChannelCodeJsonConverter
         var code = reader.GetString();
 
         if (code is null)
-            throw new JsonException("Channel code cannot be null.");
+            throw new JsonException("Refund type cannot be null.");
 
         try
         {
-            return ChannelCodeExtensions.FromDatabaseCode(code);
+            return RefundTypeExtensions.FromDatabaseCode(code);
         }
         catch (ArgumentException ex)
         {
-            throw new JsonException("Invalid channel code.", ex);
+            throw new JsonException("Invalid refund type.", ex);
         }
     }
 
     public override void Write(
         Utf8JsonWriter writer,
-        ChannelCode value,
+        RefundType value,
         JsonSerializerOptions options)
     {
         writer.WriteStringValue(value.ToDatabaseCode());

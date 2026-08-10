@@ -29,6 +29,12 @@ public class Constants
         {
             public const int Default = 10;
         }
+
+        public class RefundOts
+        {
+            public const int Complete = 10;
+            public const int Partial = 20;
+        }
     }
 
     public static class Limits
@@ -113,6 +119,14 @@ public class Constants
         public const string CardServiceResponseError = "Card service returned an unexpected status.";
         public const string AccountServiceResponseError = "Account service returned an unexpected status.";
         public const string ChargeLimitCompensateError = "Charge limit compensation is failed.";
+        public const string AccountRefundError = "Account refund did not answer as expected.";
+        public const string InvalidRefundTypeError = "Invalid refund type.";
+        public const string TransactionNotExistError = "Transaction does not exist.";
+        public const string AmountRefundTypeMismatchError = "Amount is not compatible with the refund type.";
+        public const string AuthorizationNotFoundError = "Authorization entry could not be found.";
+        public const string AssignStatusError = "Status could not be assigned.";
+        public const string TransactionAlreadyRefundedError = "Transaction is already refunded.";
+        public const string AccountRefundCompensationError = "Account refund compensation is failed.";
     }
     
     public static class CompensationOperationTypes
@@ -134,5 +148,8 @@ public class Constants
 
         public const string CancelAuthorization =
             "CANCEL_AUTHORIZATION";
+
+        public const string RestoreRefundBalance =
+            "RESTORE_REFUND_BALANCE";
     }
 }
