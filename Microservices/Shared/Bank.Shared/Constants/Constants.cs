@@ -113,6 +113,7 @@ public class Constants
         public const string CardServiceResponseError = "Card service returned an unexpected status.";
         public const string AccountServiceResponseError = "Account service returned an unexpected status.";
         public const string ChargeLimitCompensateError = "Charge limit compensation is failed.";
+        public const string PointAccountNotFoundError = "Point account could not be found.";
     }
     
     public static class CompensationOperationTypes

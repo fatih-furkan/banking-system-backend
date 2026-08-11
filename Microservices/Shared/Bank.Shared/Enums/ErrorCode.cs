@@ -57,5 +57,6 @@ public enum ErrorCode
     CustomerServiceResponseErr,
     CardServiceResponseErr,
     AccountServiceResponseErr,
-    ChargeLimitCompensateErr
+    ChargeLimitCompensateErr,
+    PointAccountNotFoundErr,
 }

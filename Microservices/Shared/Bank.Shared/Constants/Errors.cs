@@ -284,4 +284,9 @@ public static class Errors
         new(
             ErrorCode.ChargeLimitCompensateErr,
             Constants.ExceptionMessages.ChargeLimitCompensateError);
+    
+    public static readonly Error PointAccountNotFoundError =
+        new(
+            ErrorCode.PointAccountNotFoundErr,
+            Constants.ExceptionMessages.PointAccountNotFoundError);
 }
