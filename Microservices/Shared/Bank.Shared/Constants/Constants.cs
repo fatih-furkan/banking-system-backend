@@ -127,6 +127,7 @@ public class Constants
         public const string AssignStatusError = "Status could not be assigned.";
         public const string TransactionAlreadyRefundedError = "Transaction is already refunded.";
         public const string AccountRefundCompensationError = "Account refund compensation is failed.";
+        public const string MerchantNameLengthError = "Merchant name length is not appropriate.";
     }
     
     public static class CompensationOperationTypes

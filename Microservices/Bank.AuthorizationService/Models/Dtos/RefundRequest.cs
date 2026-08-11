@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 
 namespace Bank.AuthorizationService.Models.Dtos;
@@ -14,6 +15,11 @@ public class RefundRequest
     [Required]
     public ChannelCode? ChannelCode { get; set; }
     
+    [StringLength(
+        50,
+        MinimumLength = 1,
+        ErrorMessage = Constants.ExceptionMessages.MerchantNameLengthError
+    )]
     public string? MerchantName { get; set; }
     
     [Required]

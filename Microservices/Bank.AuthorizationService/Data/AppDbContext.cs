@@ -91,6 +91,10 @@ public class AppDbContext: DbContext
 
             entity.HasIndex(e => e.TransactionId)
                 .IsUnique();
+
+            entity.Property(e => e.MerchantName)
+                .HasColumnName("MERCHANT_NAME")
+                .HasMaxLength(50);
         });
         
         modelBuilder.Entity<SpendingLimit>(entity =>

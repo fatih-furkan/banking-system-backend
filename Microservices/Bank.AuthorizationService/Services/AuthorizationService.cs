@@ -113,7 +113,8 @@ public class AuthorizationService
             TransactionDate = DateTime.UtcNow,
             TransactionStatus = request.TransactionStatus,
             TransactionDescription = request.TransactionDescription,
-            TransactionId = request.TransactionId!.Value
+            TransactionId = request.TransactionId!.Value,
+            MerchantName = request.MerchantName
         };
         
         bool transactionExists = await _context.Authorizations
@@ -155,7 +156,8 @@ public class AuthorizationService
             TransactionDate = auth.TransactionDate,
             TransactionStatus = auth.TransactionStatus,
             TransactionDescription = auth.TransactionDescription,
-            TransactionId = auth.TransactionId
+            TransactionId = auth.TransactionId,
+            MerchantName = auth.MerchantName
         };
         return ServiceResult<CreateAuthorizationResponse>.Success(response);
     }
@@ -299,7 +301,8 @@ public class AuthorizationService
                 TransactionAmount = amount,
                 TransactionDescription = "Sale",
                 TransactionStatus = "1",
-                TransactionId = request.TransactionId
+                TransactionId = request.TransactionId,
+                MerchantName = request.MerchantName
             };
 
             var authorizationResult =
@@ -630,7 +633,8 @@ public class AuthorizationService
                 TransactionAmount = amount,
                 TransactionDescription = "Refund",
                 TransactionStatus = "1",
-                TransactionId = request.TransactionId
+                TransactionId = request.TransactionId,
+                MerchantName = request.MerchantName
             };
 
             var authorizationResult =
