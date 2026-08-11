@@ -128,6 +128,7 @@ public class Constants
         public const string TransactionAlreadyRefundedError = "Transaction is already refunded.";
         public const string AccountRefundCompensationError = "Account refund compensation is failed.";
         public const string MerchantNameLengthError = "Merchant name length is not appropriate.";
+        public const string MerchantNameMismatchError = "Merchant name is different from the previous record.";
     }
     
     public static class CompensationOperationTypes

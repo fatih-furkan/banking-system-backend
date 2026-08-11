@@ -532,8 +532,13 @@ public class AuthorizationService
                     Errors.AmountRefundTypeMismatchError);
             }
         }
+
+        if (theAuthorization.MerchantName != request.MerchantName)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                Errors.MerchantNameMismatchError);
+        }
         
-        //refund nerelerden gelebilir???
         if (request.ChannelCode != ChannelCode.Online &&
             request.ChannelCode != ChannelCode.Pos)
         {

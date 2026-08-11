@@ -324,4 +324,9 @@ public static class Errors
         new(
             ErrorCode.AccountRefundCompensationErr,
             Constants.ExceptionMessages.AccountRefundCompensationError);
+    
+    public static readonly Error MerchantNameMismatchError =
+        new(
+            ErrorCode.MerchantNameMismatchErr,
+            Constants.ExceptionMessages.MerchantNameMismatchError);
 }
