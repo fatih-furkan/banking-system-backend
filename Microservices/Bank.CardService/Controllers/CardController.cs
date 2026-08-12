@@ -99,4 +99,21 @@ public class CardController: ControllerBase
         }
         else return StatusCode(403, new ErrorResponse(result.Error));
     }
+    
+    [HttpGet("{cardNo}/exists-card-no")]
+    public async Task<ActionResult<bool>> ExistsByCardNo(string cardNo)
+    {
+        var result =
+            await _cardService.CheckExistenceByCardNoAsync(cardNo);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                result.StatusCode,
+                new ErrorResponse(result.Error)
+            );
+        }
+
+        return Ok(result.Data);
+    }
 }

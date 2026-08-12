@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using Bank.AuthorizationService.Models.Dtos.ClientDtos;
 using Bank.Shared;
 using Bank.Shared.Constants;
 
@@ -94,6 +95,51 @@ public class CardClient
         }
 
         return ServiceResult<bool>.Success(exists);
+    }
+    
+    public async Task<ServiceResult<CardExistsByCardNoResponse>> CardExistsByCardNoAsync(
+        string cardNo)
+    {
+        string encodedCardToken = Uri.EscapeDataString(cardNo);
+
+        using var response = await _httpClient.GetAsync(
+            $"/api/card/{encodedCardToken}/exists-card-no"
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
+            return ServiceResult<CardExistsByCardNoResponse>.Failure(
+                errorResponse?.Error ?? Errors.CardClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        CardExistsByCardNoResponse? responseContent;
+
+        try
+        {
+            responseContent = await response.Content.ReadFromJsonAsync<CardExistsByCardNoResponse>();
+        }
+        catch (JsonException)
+        {
+            throw new GeneralException(
+                Errors.CardServiceResponseError,
+                StatusCodes.Status502BadGateway
+            );
+        }
+
+        return ServiceResult<CardExistsByCardNoResponse>.Success(responseContent);
     }
 
 }

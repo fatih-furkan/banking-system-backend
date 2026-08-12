@@ -49,6 +49,20 @@ public class CardService
 
         return ServiceResult<bool>.Success(exists);
     }
+    
+    public async Task<ServiceResult<CheckExistenceByCardNoResponse>> CheckExistenceByCardNoAsync(string cardNo)
+    {
+        Card? card = await _context.Cards
+            .SingleOrDefaultAsync(card => card.CardNo == cardNo);
+
+        return ServiceResult<CheckExistenceByCardNoResponse>
+            .Success(new CheckExistenceByCardNoResponse
+                {
+                    Exists = !(card is null),
+                    CardToken = card?.CardToken
+                }
+            );
+    }
 
     public async Task<bool> CardBelongsToCustomer(string cardToken, long customerId)
     {

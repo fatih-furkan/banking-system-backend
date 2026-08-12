@@ -329,4 +329,9 @@ public static class Errors
         new(
             ErrorCode.MerchantNameMismatchErr,
             Constants.ExceptionMessages.MerchantNameMismatchError);
+    
+    public static readonly Error CardTokenMismatchError =
+        new(
+            ErrorCode.CardTokenMismatchErr,
+            Constants.ExceptionMessages.CardTokenMismatchError);
 }

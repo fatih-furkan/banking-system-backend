@@ -9,6 +9,7 @@ using Bank.Shared;
 using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 using Oracle.ManagedDataAccess.Client;
 
 namespace Bank.AuthorizationService.Services;
@@ -216,6 +217,19 @@ public class AuthorizationService
             );
         }
 
+        var cardExistsResult = await _cardClient.CardExistsByCardNoAsync(request.CardNo);
+        
+        if (!cardExistsResult.IsSuccess ||
+            string.IsNullOrWhiteSpace(cardExistsResult.Data?.CardToken))
+        {
+            return ServiceResult<SaleResponse>.Failure(
+                cardExistsResult.Error ?? Errors.AccountNotFoundError,
+                cardExistsResult.StatusCode
+            );
+        }
+
+        var cardToken = cardExistsResult.Data.CardToken;
+
         var accountNoResult =
             await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
 
@@ -302,7 +316,8 @@ public class AuthorizationService
                 TransactionDescription = "Sale",
                 TransactionStatus = "1",
                 TransactionId = request.TransactionId,
-                MerchantName = request.MerchantName
+                MerchantName = request.MerchantName,
+                CardToken = cardToken
             };
 
             var authorizationResult =
@@ -547,7 +562,27 @@ public class AuthorizationService
                 StatusCodes.Status403Forbidden
             );
         }
+        
+        
+        var cardExistsResult = await _cardClient.CardExistsByCardNoAsync(request.CardNo);
+        
+        if (!cardExistsResult.IsSuccess ||
+            string.IsNullOrWhiteSpace(cardExistsResult.Data?.CardToken))
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                cardExistsResult.Error ?? Errors.AccountNotFoundError,
+                cardExistsResult.StatusCode
+            );
+        }
 
+        var cardToken = cardExistsResult.Data.CardToken;
+
+        if (theAuthorization.CardToken != cardToken)
+        {
+            return ServiceResult<RefundResponse>.Failure(
+                Errors.CardTokenMismatchError);
+        }
+        
         var accountNoResult =
             await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
 
@@ -639,7 +674,8 @@ public class AuthorizationService
                 TransactionDescription = "Refund",
                 TransactionStatus = "1",
                 TransactionId = request.TransactionId,
-                MerchantName = request.MerchantName
+                MerchantName = request.MerchantName,
+                CardToken = cardToken
             };
 
             var authorizationResult =
