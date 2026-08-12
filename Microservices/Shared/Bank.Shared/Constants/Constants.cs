@@ -130,6 +130,8 @@ public class Constants
         public const string MerchantNameLengthError = "Merchant name length is not appropriate.";
         public const string MerchantNameMismatchError = "Merchant name is different from the previous record.";
         public const string CardTokenMismatchError = "Card token is different from the previous record.";
+        public const string RefundAmountTooMuchError = "The total refund amount is higher than the sale amount.";
+        public const string RefundedAmountUpdateError = "Refunded amount could not be updated.";
     }
     
     public static class CompensationOperationTypes
@@ -154,5 +156,8 @@ public class Constants
 
         public const string RestoreRefundBalance =
             "RESTORE_REFUND_BALANCE";
+
+        public const string CompensateRefundAuthorization =
+            "COMPENSATE_REFUND_AUTHORIZATION";
     }
 }

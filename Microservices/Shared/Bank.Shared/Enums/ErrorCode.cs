@@ -67,5 +67,7 @@ public enum ErrorCode
     TransactionAlreadyRefundedErr,
     AccountRefundCompensationErr,
     MerchantNameMismatchErr,
-    CardTokenMismatchErr
+    CardTokenMismatchErr,
+    RefundAmountTooMuchErr,
+    RefundedAmountUpdateErr,
 }

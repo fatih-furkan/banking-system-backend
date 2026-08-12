@@ -83,4 +83,8 @@ public class CreateAuthorizationRequest
         ErrorMessage = Constants.ExceptionMessages.MerchantNameLengthError
     )]
     public string? MerchantName { get; set; }
+    
+    public long? OriginalTransactionId { get; set; }
+    
+    public decimal? RefundedAmount { get; set; }
 }

@@ -95,6 +95,14 @@ public class AppDbContext: DbContext
             entity.Property(e => e.MerchantName)
                 .HasColumnName("MERCHANT_NAME")
                 .HasMaxLength(50);
+            
+            entity.Property(e => e.OriginalTransactionId)
+                .HasColumnName("ORIGINAL_TRXN_ID")
+                .HasPrecision(18);
+            
+            entity.Property(e => e.RefundedAmount)
+                .HasColumnName("REFUNDED_AMOUNT")
+                .HasPrecision(18,2);
         });
         
         modelBuilder.Entity<SpendingLimit>(entity =>

@@ -115,7 +115,9 @@ public class AuthorizationService
             TransactionStatus = request.TransactionStatus,
             TransactionDescription = request.TransactionDescription,
             TransactionId = request.TransactionId!.Value,
-            MerchantName = request.MerchantName
+            MerchantName = request.MerchantName,
+            RefundedAmount = request.RefundedAmount,
+            OriginalTransactionId = request.OriginalTransactionId
         };
         
         bool transactionExists = await _context.Authorizations
@@ -317,7 +319,8 @@ public class AuthorizationService
                 TransactionStatus = "1",
                 TransactionId = request.TransactionId,
                 MerchantName = request.MerchantName,
-                CardToken = cardToken
+                CardToken = cardToken,
+                RefundedAmount = 0
             };
 
             var authorizationResult =
@@ -640,26 +643,37 @@ public class AuthorizationService
             await using var transaction =
                 await _context.Database.BeginTransactionAsync();
             
+            int affectedRefundedAmountRows = await _context.Authorizations
+                .Where(x =>
+                    x.TransactionId == request.SaleTransactionId &&
+                    x.TransactionStatus == "1" &&
+                    (x.RefundedAmount ?? 0m) + amount <= x.TransactionAmount)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(
+                        x => x.RefundedAmount,
+                        x => x.RefundedAmount + amount
+                    )
+                );
+
+            if (affectedRefundedAmountRows == 0)
+            {
+                throw new GeneralException(
+                    Errors.RefundedAmountUpdateError,
+                    StatusCodes.Status409Conflict
+                );
+            }
             
-            int affectedRows = await _context.Authorizations
+            await _context.Authorizations
                 .Where(authorization =>
                     authorization.TransactionId == request.SaleTransactionId &&
-                    authorization.TransactionStatus ==
-                    "1")
+                    authorization.TransactionStatus == "1" &&
+                    authorization.RefundedAmount == authorization.TransactionAmount)
                 .ExecuteUpdateAsync(setters => setters
                     .SetProperty(
                         authorization => authorization.TransactionStatus,
                         "0"
                     )
                 );
-
-            if (affectedRows == 0)
-            {
-                throw new GeneralException(
-                    Errors.TransactionAlreadyRefundedError,
-                    StatusCodes.Status409Conflict
-                );
-            }
             
             var authorizationRequest = new CreateAuthorizationRequest
             {
@@ -675,7 +689,8 @@ public class AuthorizationService
                 TransactionStatus = "1",
                 TransactionId = request.TransactionId,
                 MerchantName = request.MerchantName,
-                CardToken = cardToken
+                CardToken = cardToken,
+                OriginalTransactionId = request.SaleTransactionId
             };
 
             var authorizationResult =
@@ -738,46 +753,108 @@ public class AuthorizationService
         Guid operationId,
         long saleTransactionId)
     {
-
-        // 1. Cancel authorization
         if (authorizationGuid is not null)
         {
             try
             {
+                const string operationType =
+                    Constants.CompensationOperationTypes
+                        .CompensateRefundAuthorization;
+
                 await using var transaction =
                     await _context.Database.BeginTransactionAsync();
-                
-                var newEntryResult = await AssignStatusAsync(
-                    new AssignStatusRequest
-                    {
-                        Status = "0"
-                    },
-                    authorizationGuid
-                );
 
-                var oldEntryResult = await AssignStatusWithTrxnIdAsync(
-                    new AssignStatusRequest
-                    {
-                        Status = "1"
-                    },
-                    saleTransactionId
-                );
-                
-                if (!newEntryResult.IsSuccess || !oldEntryResult.IsSuccess)
+                bool alreadyCompleted =
+                    await _context.CompletedSagaOperations
+                        .AnyAsync(x =>
+                            x.OperationId == operationId &&
+                            x.OperationType == operationType
+                        );
+
+                if (alreadyCompleted)
                 {
-                    _logger.LogError(
-                        "Authorization compensation failed. " +
-                        "OperationId: {OperationId}, AuthorizationGuid: {AuthorizationGuid}",
-                        operationId,
+                    await transaction.CommitAsync();
+                }
+                else
+                {
+                    // 1. Cancel the newly created refund authorization
+                    var newEntryResult = await AssignStatusAsync(
+                        new AssignStatusRequest
+                        {
+                            Status = "0"
+                        },
                         authorizationGuid
                     );
+
+                    if (!newEntryResult.IsSuccess)
+                    {
+                        throw new GeneralException(
+                            newEntryResult.Error ??
+                            Errors.AuthCompensateError,
+                            newEntryResult.StatusCode
+                        );
+                    }
+
+                    // 2. Undo RefundedAmount increase
+                    int affectedRefundedAmountRows =
+                        await _context.Authorizations
+                            .Where(x =>
+                                x.TransactionId == saleTransactionId &&
+                                x.RefundedAmount >= amount)
+                            .ExecuteUpdateAsync(setters => setters
+                                .SetProperty(
+                                    x => x.RefundedAmount,
+                                    x => x.RefundedAmount - amount
+                                )
+                            );
+
+                    if (affectedRefundedAmountRows == 0)
+                    {
+                        throw new GeneralException(
+                            Errors.AuthCompensateError,
+                            StatusCodes.Status500InternalServerError
+                        );
+                    }
+
+                    // 3. Make the original sale refundable/active again
+                    var oldEntryResult =
+                        await AssignStatusWithTrxnIdAsync(
+                            new AssignStatusRequest
+                            {
+                                Status = "1"
+                            },
+                            saleTransactionId
+                        );
+
+                    if (!oldEntryResult.IsSuccess)
+                    {
+                        throw new GeneralException(
+                            oldEntryResult.Error ??
+                            Errors.AuthCompensateError,
+                            oldEntryResult.StatusCode
+                        );
+                    }
+
+                    // 4. Record successful compensation
+                    _context.CompletedSagaOperations.Add(
+                        new CompletedSagaOperation
+                        {
+                            OperationId = operationId,
+                            OperationType = operationType,
+                            CompletedAt = DateTime.UtcNow
+                        }
+                    );
+
+                    await _context.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
                 }
             }
             catch (Exception exception)
             {
                 _logger.LogError(
                     exception,
-                    "Authorization compensation threw an exception. " +
+                    "Authorization compensation failed. " +
                     "OperationId: {OperationId}, AuthorizationGuid: {AuthorizationGuid}",
                     operationId,
                     authorizationGuid

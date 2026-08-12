@@ -334,4 +334,14 @@ public static class Errors
         new(
             ErrorCode.CardTokenMismatchErr,
             Constants.ExceptionMessages.CardTokenMismatchError);
+    
+    public static readonly Error RefundAmountTooMuchError =
+        new(
+            ErrorCode.RefundAmountTooMuchErr,
+            Constants.ExceptionMessages.RefundAmountTooMuchError);
+    
+    public static readonly Error RefundedAmountUpdateError =
+        new(
+            ErrorCode.RefundedAmountUpdateErr,
+            Constants.ExceptionMessages.RefundedAmountUpdateError);
 }
