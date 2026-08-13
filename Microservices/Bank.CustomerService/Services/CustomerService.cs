@@ -169,7 +169,7 @@ public class CustomerService
             spendingLimitCreated = true;
 
             // Everything succeeded.
-            customer.Status = request.Status;
+            customer.Status = "1";
 
             await _context.SaveChangesAsync();
             

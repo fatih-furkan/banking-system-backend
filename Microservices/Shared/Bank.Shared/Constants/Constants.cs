@@ -76,10 +76,7 @@ public class Constants
         public const string NumberContainsChar = "The alleged number contains non numeric characters.";
         public const string AccountCreateError = "Account could not be created.";
         public const string CardSagaError = "Create card saga failed.";
-
-        public static string AccountCompensationError(string accountId) =>
-            $"Account compensation failed. AccountId: {accountId}";
-
+        public const string AccountCompensationError = "Account compensation failed.";
         public const string GetCustomerError = "Customer could not be found.";
         public const string TcError = "The tc is wrong.";
         public const string TcAssignedError = "The tc is already assigned to another user.";
@@ -103,6 +100,7 @@ public class Constants
         public const string AccountServiceUrlError = "AccountService URL is not configured.";
         public const string CardServiceUrlError = "CardService URL is not configured.";
         public const string AuthorizationServiceUrlError = "AuthorizationService URL is not configured.";
+        public const string PointServiceUrlError = "Point service URL is not configured.";
         public const string AccountSaleError = "Account sale did not answer as expected.";
         public const string SpendingLimitCompensationError = "Charge limit compensation is failed.";
         public const string LimitAlreadyExistsError = "A limit entry already exists for this customer.";
