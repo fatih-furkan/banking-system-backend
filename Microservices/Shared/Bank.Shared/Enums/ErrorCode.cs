@@ -70,4 +70,8 @@ public enum ErrorCode
     CardTokenMismatchErr,
     RefundAmountTooMuchErr,
     RefundedAmountUpdateErr,
+    PointAccountNotFoundErr,
+    PointClientErr,
+    PointAccountCreateErr,
+    SpendingLimitCompensateErr,
 }

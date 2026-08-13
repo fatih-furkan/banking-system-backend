@@ -162,4 +162,23 @@ public class SpendingLimitController : ControllerBase
 
         return Ok(result.Data);
     }
+    
+    [HttpPost("compensate-create-spending-limit")]
+    public async Task<IActionResult> CompensateCreateSpendingLimit(
+        [FromBody] long customerId)
+    {
+        var result =
+            await _spendingLimitService
+                .CompensateCreateSpendingLimitAsync(customerId);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                result.StatusCode,
+                new ErrorResponse(result.Error)
+            );
+        }
+
+        return Ok(result.Data);
+    }
 }

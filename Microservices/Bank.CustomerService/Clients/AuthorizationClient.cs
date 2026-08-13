@@ -76,4 +76,33 @@ public class AuthorizationClient
 
         return ServiceResult<CreateSpendingLimitResponse>.Success(result);
     }
+
+    public async Task<ServiceResult<Unit>> CompensateCreateSpendingLimitAsync(long customerId)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/spending-limit/compensate-create-spending-limit",
+            customerId
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
+            return ServiceResult<Unit>.Failure(
+                errorResponse?.Error ?? Errors.AuthClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        return ServiceResult<Unit>.Success(new Unit());
+    }
 }

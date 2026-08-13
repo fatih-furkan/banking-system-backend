@@ -132,6 +132,11 @@ public class Constants
         public const string CardTokenMismatchError = "Card token is different from the previous record.";
         public const string RefundAmountTooMuchError = "The total refund amount is higher than the sale amount.";
         public const string RefundedAmountUpdateError = "Refunded amount could not be updated.";
+        public const string PointAccountNotFoundError = "Point account could not be found.";
+        public const string PointClientError = "Point client got an unexpected response.";
+        public const string PointAccountCreateError = "Point account could not be created.";
+        public const string SpendingLimitCompensateError = "Spending limit could not be compensated.";
+        public const string CustomerCreationCompensate = "Customer creation failed. Starting compensation.";
     }
     
     public static class CompensationOperationTypes

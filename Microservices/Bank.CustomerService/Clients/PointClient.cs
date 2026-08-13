@@ -5,24 +5,24 @@ using Bank.Shared.Constants;
 
 namespace Bank.CustomerService.Clients;
 
-public class AccountClient
+public class PointClient
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<AccountClient> _logger;
+    private readonly ILogger<PointClient> _logger;
 
-    public AccountClient(HttpClient httpClient, ILogger<AccountClient> logger)
+    public PointClient(HttpClient httpClient, ILogger<PointClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
     }
 
-    public async Task<ServiceResult<CreateChargeLimitResponse>>
-        CreateChargeLimitAsync(
-            CreateChargeLimitRequest request,
+    public async Task<ServiceResult<string>>
+        CreatePointAccountAsync(
+            CreatePointAccountRequest request,
             CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.PostAsJsonAsync(
-            "/api/charge-limit",
+            "/api/point",
             request,
             cancellationToken
         );
@@ -42,19 +42,19 @@ public class AccountClient
             {
             }
 
-            return ServiceResult<CreateChargeLimitResponse>.Failure(
-                errorResponse?.Error ?? Errors.ChargeLimitCreateError,
+            return ServiceResult<string>.Failure(
+                errorResponse?.Error ?? Errors.PointClientError,
                 (int)response.StatusCode
             );
         }
-
-        CreateChargeLimitResponse? result;
+        
+        CreatePointAccountResponse? result;
 
         try
         {
             result =
                 await response.Content
-                    .ReadFromJsonAsync<CreateChargeLimitResponse>(
+                    .ReadFromJsonAsync<CreatePointAccountResponse>(
                         cancellationToken
                     );
         }
@@ -74,14 +74,21 @@ public class AccountClient
             );
         }
 
-        return ServiceResult<CreateChargeLimitResponse>.Success(result);
+        return ServiceResult<string>.Success(result.AccountNo);
     }
     
-    public async Task<ServiceResult<Unit>> CompensateCreateChargeLimitAsync(long customerId)
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(
+        string pointAccountNo,
+        string status)
     {
+        var body = new
+        {
+            Status = status
+        };
+
         using var response = await _httpClient.PostAsJsonAsync(
-            "/api/charge-limit/compensate-create-charge-limit",
-            customerId
+            $"/api/point/{Uri.EscapeDataString(pointAccountNo)}/assign-status",
+            body
         );
 
         if (!response.IsSuccessStatusCode)
@@ -98,7 +105,38 @@ public class AccountClient
             }
 
             return ServiceResult<Unit>.Failure(
-                errorResponse?.Error ?? Errors.AccountClientError,
+                errorResponse?.Error ?? Errors.PointClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        return ServiceResult<Unit>.Success(new Unit());
+    }
+
+    public async Task<ServiceResult<Unit>> CompensateCreatePointAccountAsync(
+        string pointAccountNo)
+    {
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            $"/api/point/compensate-create-point-account",
+            pointAccountNo
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
+            return ServiceResult<Unit>.Failure(
+                errorResponse?.Error ?? Errors.PointClientError,
                 (int)response.StatusCode
             );
         }
