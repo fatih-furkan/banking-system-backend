@@ -289,4 +289,19 @@ public static class Errors
         new(
             ErrorCode.PointAccountNotFoundErr,
             Constants.ExceptionMessages.PointAccountNotFoundError);
+    
+    public static readonly Error PointClientError =
+        new(
+            ErrorCode.PointClientErr,
+            Constants.ExceptionMessages.PointClientError);
+    
+    public static readonly Error PointAccountCreateError =
+        new(
+            ErrorCode.PointAccountCreateErr,
+            Constants.ExceptionMessages.PointAccountCreateError);
+    
+    public static readonly Error SpendingLimitCompensateError =
+        new(
+            ErrorCode.SpendingLimitCompensateErr,
+            Constants.ExceptionMessages.SpendingLimitCompensateError);
 }

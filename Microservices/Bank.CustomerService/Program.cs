@@ -51,6 +51,17 @@ builder.Services.AddHttpClient<AuthorizationClient>(client =>
     client.BaseAddress = new Uri(baseAddress);
 });
 
+builder.Services.AddHttpClient<PointClient>(client =>
+{
+    string baseAddress =
+        builder.Configuration["Services:PointService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.PointServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
+});
+
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>

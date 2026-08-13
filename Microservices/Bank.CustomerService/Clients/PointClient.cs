@@ -5,24 +5,24 @@ using Bank.Shared.Constants;
 
 namespace Bank.CustomerService.Clients;
 
-public class AuthorizationClient
+public class PointClient
 {
     private readonly HttpClient _httpClient;
-    private readonly ILogger<AccountClient> _logger;
+    private readonly ILogger<PointClient> _logger;
 
-    public AuthorizationClient(HttpClient httpClient, ILogger<AccountClient> logger)
+    public PointClient(HttpClient httpClient, ILogger<PointClient> logger)
     {
         _httpClient = httpClient;
         _logger = logger;
     }
 
-    public async Task<ServiceResult<CreateSpendingLimitResponse>>
-        AddSpendingLimitAsync(
-            CreateSpendingLimitRequest request,
+    public async Task<ServiceResult<string>>
+        CreatePointAccountAsync(
+            CreatePointAccountRequest request,
             CancellationToken cancellationToken = default)
     {
         using var response = await _httpClient.PostAsJsonAsync(
-            "/api/spending-limit",
+            "/api/point",
             request,
             cancellationToken
         );
@@ -42,26 +42,26 @@ public class AuthorizationClient
             {
             }
 
-            return ServiceResult<CreateSpendingLimitResponse>.Failure(
-                errorResponse?.Error ?? Errors.SpendingLimitCreateError,
+            return ServiceResult<string>.Failure(
+                errorResponse?.Error ?? Errors.PointClientError,
                 (int)response.StatusCode
             );
         }
-
-        CreateSpendingLimitResponse? result;
+        
+        CreatePointAccountResponse? result;
 
         try
         {
             result =
                 await response.Content
-                    .ReadFromJsonAsync<CreateSpendingLimitResponse>(
+                    .ReadFromJsonAsync<CreatePointAccountResponse>(
                         cancellationToken
                     );
         }
         catch (JsonException)
         {
             throw new GeneralException(
-                Errors.AuthorizationServiceResponseError,
+                Errors.AccountServiceResponseError,
                 StatusCodes.Status502BadGateway
             );
         }
@@ -69,19 +69,26 @@ public class AuthorizationClient
         if (result is null)
         {
             throw new GeneralException(
-                Errors.AuthorizationServiceResponseError,
+                Errors.AccountServiceResponseError,
                 StatusCodes.Status502BadGateway
             );
         }
 
-        return ServiceResult<CreateSpendingLimitResponse>.Success(result);
+        return ServiceResult<string>.Success(result.AccountNo);
     }
-
-    public async Task<ServiceResult<Unit>> CompensateCreateSpendingLimitAsync(long customerId)
+    
+    public async Task<ServiceResult<Unit>> AssignStatusAsync(
+        string pointAccountNo,
+        string status)
     {
+        var body = new
+        {
+            Status = status
+        };
+
         using var response = await _httpClient.PostAsJsonAsync(
-            "/api/spending-limit/compensate-create-spending-limit",
-            customerId
+            $"/api/point/{Uri.EscapeDataString(pointAccountNo)}/assign-status",
+            body
         );
 
         if (!response.IsSuccessStatusCode)
@@ -98,7 +105,38 @@ public class AuthorizationClient
             }
 
             return ServiceResult<Unit>.Failure(
-                errorResponse?.Error ?? Errors.AuthClientError,
+                errorResponse?.Error ?? Errors.PointClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        return ServiceResult<Unit>.Success(new Unit());
+    }
+
+    public async Task<ServiceResult<Unit>> CompensateCreatePointAccountAsync(
+        string pointAccountNo)
+    {
+
+        using var response = await _httpClient.PostAsJsonAsync(
+            $"/api/point/compensate-create-point-account",
+            pointAccountNo
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
+            return ServiceResult<Unit>.Failure(
+                errorResponse?.Error ?? Errors.PointClientError,
                 (int)response.StatusCode
             );
         }

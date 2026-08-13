@@ -110,6 +110,15 @@ public class PointService
         await _context.SaveChangesAsync();
         return ServiceResult<Unit>.Success(new Unit());
     }
+
+    public async Task<ServiceResult<Unit>> CompensateCreatePointAccountAsync(string pointAccountNo)
+    {
+        await _context.PointAccounts
+            .Where(x => x.AccountNo == pointAccountNo)
+            .ExecuteDeleteAsync();
+        
+        return ServiceResult<Unit>.Success(new Unit());
+    }
     
     private async Task<long> GetNextPointAccountNoSequenceValueAsync()
     {

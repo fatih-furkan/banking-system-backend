@@ -59,4 +59,7 @@ public enum ErrorCode
     AccountServiceResponseErr,
     ChargeLimitCompensateErr,
     PointAccountNotFoundErr,
+    PointClientErr,
+    PointAccountCreateErr,
+    SpendingLimitCompensateErr,
 }

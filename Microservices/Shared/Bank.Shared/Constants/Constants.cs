@@ -97,6 +97,7 @@ public class Constants
         public const string AccountServiceUrlError = "AccountService URL is not configured.";
         public const string CardServiceUrlError = "CardService URL is not configured.";
         public const string AuthorizationServiceUrlError = "AuthorizationService URL is not configured.";
+        public const string PointServiceUrlError = "PointService URL is not configured.";
         public const string AccountSaleError = "Account sale did not answer as expected.";
         public const string SpendingLimitCompensationError = "Charge limit compensation is failed.";
         public const string LimitAlreadyExistsError = "A limit entry already exists for this customer.";
@@ -114,6 +115,10 @@ public class Constants
         public const string AccountServiceResponseError = "Account service returned an unexpected status.";
         public const string ChargeLimitCompensateError = "Charge limit compensation is failed.";
         public const string PointAccountNotFoundError = "Point account could not be found.";
+        public const string PointClientError = "Point client got an unexpected response.";
+        public const string PointAccountCreateError = "Point account could not be created.";
+        public const string SpendingLimitCompensateError = "Spending limit could not be compensated.";
+        public const string CustomerCreationCompensate = "Customer creation failed. Starting compensation.";
     }
     
     public static class CompensationOperationTypes

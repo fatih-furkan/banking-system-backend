@@ -336,4 +336,17 @@ public class ChargeLimitService
 
         return ServiceResult<Unit>.Success(new Unit());
     }
+    
+    public async Task<ServiceResult<Unit>> CompensateCreateChargeLimitAsync(long customerId)
+    {
+        await _context.CurrentChargeLimits
+            .Where(x => x.CustomerId == customerId)
+            .ExecuteDeleteAsync();
+        
+        await _context.ChargeLimits
+            .Where(x => x.CustomerId == customerId)
+            .ExecuteDeleteAsync();
+        
+        return ServiceResult<Unit>.Success(new Unit());
+    }
 }

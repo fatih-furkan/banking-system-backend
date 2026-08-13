@@ -68,4 +68,17 @@ public class PointController: ControllerBase
 
         return Ok(result.Data);
     }
+    
+    [HttpPost("compensate-create-point-account")]
+    public async Task<IActionResult> CompensateCreatePointAccount(
+        [FromBody] string pointAccountNo)
+    {
+        var result = await _pointService.CompensateCreatePointAccountAsync(pointAccountNo);
+        if (!result.IsSuccess)
+        {
+            return StatusCode(403, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
 }

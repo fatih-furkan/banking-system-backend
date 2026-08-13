@@ -295,4 +295,17 @@ public class SpendingLimitService
 
         return ServiceResult<Unit>.Success(new Unit());
     }
+
+    public async Task<ServiceResult<Unit>> CompensateCreateSpendingLimitAsync(long customerId)
+    {
+        await _context.CurrentSpendingLimits
+            .Where(x => x.CustomerId == customerId)
+            .ExecuteDeleteAsync();
+        
+        await _context.SpendingLimits
+            .Where(x => x.CustomerId == customerId)
+            .ExecuteDeleteAsync();
+        
+        return ServiceResult<Unit>.Success(new Unit());
+    }
 }
