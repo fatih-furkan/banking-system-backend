@@ -2,8 +2,10 @@
 
 public class CreatePointAccountResponse
 {
-    public string AccountNo { get; set; } = null!;
-    public long CustomerId { get; set; }
-    public decimal Balance { get; set; }
-    public string Status { get; set; } = null!;
+    public required string AccountNo { get; set; } = null!;
+    public required long CustomerId { get; set; }
+    public required string Status { get; set; } = null!;
+    public required decimal UsedPoint { get; set; }
+    public required decimal EarnedPoint { get; set; }
+    public required decimal ExpiredPoint { get; set; }
 }

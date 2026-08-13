@@ -37,14 +37,24 @@ public class AppDbContext: DbContext
                 entity.HasIndex(e => e.CustomerId)
                     .IsUnique();
                 
-                entity.Property(e => e.Balance)
-                    .HasColumnName("BALANCE")
-                    .HasPrecision(18,2)
-                    .IsRequired();
-                
                 entity.Property(e => e.Status)
                     .HasColumnName("STATUS")
                     .HasMaxLength(2)
+                    .IsRequired();
+                
+                entity.Property(e => e.EarnedPoint)
+                    .HasColumnName("EARNED_POINT")
+                    .HasPrecision(18,2)
+                    .IsRequired();
+                
+                entity.Property(e => e.UsedPoint)
+                    .HasColumnName("USED_POINT")
+                    .HasPrecision(18,2)
+                    .IsRequired();
+                
+                entity.Property(e => e.ExpiredPoint)
+                    .HasColumnName("EXPIRED_POINT")
+                    .HasPrecision(18,2)
                     .IsRequired();
             }
         );

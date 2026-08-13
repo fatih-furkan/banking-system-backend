@@ -53,8 +53,10 @@ public class PointService
         {
             AccountNo = accountNo.ToString(),
             CustomerId = request.CustomerId.Value,
-            Status = request.Status,
-            Balance = 0
+            Status = "1",
+            EarnedPoint = 0,
+            UsedPoint = 0,
+            ExpiredPoint = 0
         };
         
         _context.PointAccounts.Add(pointAccount);
@@ -63,7 +65,10 @@ public class PointService
         {
             AccountNo = pointAccount.AccountNo,
             CustomerId = pointAccount.CustomerId,
-            Status = pointAccount.Status
+            Status = pointAccount.Status,
+            UsedPoint = pointAccount.UsedPoint,
+            EarnedPoint = pointAccount.EarnedPoint,
+            ExpiredPoint = pointAccount.ExpiredPoint
         };
         return ServiceResult<CreatePointAccountResponse?>.Success(response);
     }

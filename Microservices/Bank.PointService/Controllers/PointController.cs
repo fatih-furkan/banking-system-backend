@@ -57,7 +57,7 @@ public class PointController: ControllerBase
         else return Ok();
     }
     
-    [HttpPost("{accountNo}/assign-status")]
+    [HttpPatch("{accountNo}/assign-status")]
     public async Task<IActionResult> AssignStatus(AssignStatusRequest request, string accountNo)
     {
         var result = await _pointService.AssignStatusAsync(request, accountNo);

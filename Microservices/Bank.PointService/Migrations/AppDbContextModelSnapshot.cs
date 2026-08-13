@@ -30,21 +30,31 @@ namespace Bank.PointService.Migrations
                         .HasColumnType("NVARCHAR2(8)")
                         .HasColumnName("ACCOUNT_NO");
 
-                    b.Property<decimal>("Balance")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("DECIMAL(18,2)")
-                        .HasColumnName("BALANCE");
-
                     b.Property<long>("CustomerId")
                         .HasPrecision(18)
                         .HasColumnType("NUMBER(18)")
                         .HasColumnName("CUSTOMER_ID");
+
+                    b.Property<decimal>("EarnedPoint")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("DECIMAL(18,2)")
+                        .HasColumnName("EARNED_POINT");
+
+                    b.Property<decimal>("ExpiredPoint")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("DECIMAL(18,2)")
+                        .HasColumnName("EXPIRED_POINT");
 
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("NVARCHAR2(2)")
                         .HasColumnName("STATUS");
+
+                    b.Property<decimal>("UsedPoint")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("DECIMAL(18,2)")
+                        .HasColumnName("USED_POINT");
 
                     b.HasKey("AccountNo");
 
