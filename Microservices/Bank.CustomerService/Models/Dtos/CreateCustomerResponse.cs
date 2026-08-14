@@ -1,6 +1,6 @@
-﻿namespace Bank.CustomerService.Models.Dtos;
+﻿namespace Bank.CustomerService.Models.Dtos; 
 
-public class CreateCustomerResponse
+public class CreateCustomerResponse  
 {
     public string Name { get; set; } = null!;
     public string Surname { get; set; } = null!;

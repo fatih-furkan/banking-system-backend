@@ -7,7 +7,7 @@ namespace Bank.CustomerService.Clients;
 
 public class AccountClient
 {
-    private readonly HttpClient _httpClient;
+    private readonly HttpClient _httpClient; 
     private readonly ILogger<AccountClient> _logger;
 
     public AccountClient(HttpClient httpClient, ILogger<AccountClient> logger)

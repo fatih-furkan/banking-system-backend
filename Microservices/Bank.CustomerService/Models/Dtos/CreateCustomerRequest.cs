@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations; 
 
-namespace Bank.CustomerService.Models.Dtos;
+namespace Bank.CustomerService.Models.Dtos;   
 
-public class CreateCustomerRequest
+public class CreateCustomerRequest          
 {
     [MaxLength(50, ErrorMessage = "Name is too long.")]
     [MinLength(1, ErrorMessage = "Name cannot be empty string.")]

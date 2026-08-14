@@ -11,6 +11,7 @@ namespace Bank.CustomerService.Services;
 
 public class CustomerService
 {
+    
     private readonly AppDbContext _context;
     private readonly AccountClient _accountClient;
     private readonly AuthorizationClient _authorizationClient;
@@ -34,7 +35,7 @@ public class CustomerService
     {
         return await _context.Customers.ToListAsync();
     }
-    
+   
     public async Task<Customer?> GetCustomerByCustomerIdAsync(long customerId)
     {
         return await _context.Customers.FindAsync(customerId);
@@ -85,7 +86,7 @@ public class CustomerService
                 Surname = request.Surname,
                 Tc = request.Tc,
 
-                // Pending until all related resources are created.
+               
                 Status = "2"
             };
 
@@ -94,7 +95,7 @@ public class CustomerService
 
             customerCreated = true;
 
-            // 1. Create point account
+          
             var createPointAccountResult =
                 await _pointClient.CreatePointAccountAsync(
                     new CreatePointAccountRequest
@@ -116,7 +117,7 @@ public class CustomerService
 
             pointAccountCreated = true;
 
-            // 2. Create charge limit
+          
             var createChargeLimitResult =
                 await _accountClient.CreateChargeLimitAsync(
                     new CreateChargeLimitRequest
@@ -142,7 +143,7 @@ public class CustomerService
 
             chargeLimitCreated = true;
 
-            // 3. Create spending limit
+          
             var createSpendingLimitResult =
                 await _authorizationClient.AddSpendingLimitAsync(
                     new CreateSpendingLimitRequest
@@ -168,7 +169,7 @@ public class CustomerService
 
             spendingLimitCreated = true;
 
-            // Everything succeeded.
+            
             customer.Status = "1";
 
             await _context.SaveChangesAsync();
@@ -213,7 +214,7 @@ public class CustomerService
     Guid operationId,
     string pointAccountNo)
     {
-        // 1. Remove spending limit
+       
         if (spendingLimitCreated)
         {
             try
@@ -248,7 +249,7 @@ public class CustomerService
             }
         }
 
-        // 2. Remove charge limit
+        
         if (chargeLimitCreated)
         {
             try
@@ -283,7 +284,7 @@ public class CustomerService
             }
         }
 
-        // 3. Remove point account
+        
         if (pointAccountCreated)
         {
             try
@@ -318,7 +319,7 @@ public class CustomerService
             }
         }
 
-        // 4. Remove customer
+        
         if (customerCreated)
         {
             try
