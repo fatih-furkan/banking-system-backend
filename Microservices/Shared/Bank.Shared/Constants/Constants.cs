@@ -29,6 +29,12 @@ public class Constants
         {
             public const int Default = 10;
         }
+
+        public class RefundOts
+        {
+            public const int Complete = 10;
+            public const int Partial = 20;
+        }
     }
 
     public static class Limits
@@ -70,10 +76,7 @@ public class Constants
         public const string NumberContainsChar = "The alleged number contains non numeric characters.";
         public const string AccountCreateError = "Account could not be created.";
         public const string CardSagaError = "Create card saga failed.";
-
-        public static string AccountCompensationError(string accountId) =>
-            $"Account compensation failed. AccountId: {accountId}";
-
+        public const string AccountCompensationError = "Account compensation failed.";
         public const string GetCustomerError = "Customer could not be found.";
         public const string TcError = "The tc is wrong.";
         public const string TcAssignedError = "The tc is already assigned to another user.";
@@ -97,6 +100,7 @@ public class Constants
         public const string AccountServiceUrlError = "AccountService URL is not configured.";
         public const string CardServiceUrlError = "CardService URL is not configured.";
         public const string AuthorizationServiceUrlError = "AuthorizationService URL is not configured.";
+        public const string PointServiceUrlError = "Point service URL is not configured.";
         public const string AccountSaleError = "Account sale did not answer as expected.";
         public const string SpendingLimitCompensationError = "Charge limit compensation is failed.";
         public const string LimitAlreadyExistsError = "A limit entry already exists for this customer.";
@@ -113,6 +117,24 @@ public class Constants
         public const string CardServiceResponseError = "Card service returned an unexpected status.";
         public const string AccountServiceResponseError = "Account service returned an unexpected status.";
         public const string ChargeLimitCompensateError = "Charge limit compensation is failed.";
+        public const string AccountRefundError = "Account refund did not answer as expected.";
+        public const string InvalidRefundTypeError = "Invalid refund type.";
+        public const string TransactionNotExistError = "Transaction does not exist.";
+        public const string AmountRefundTypeMismatchError = "Amount is not compatible with the refund type.";
+        public const string AuthorizationNotFoundError = "Authorization entry could not be found.";
+        public const string AssignStatusError = "Status could not be assigned.";
+        public const string TransactionAlreadyRefundedError = "Transaction is already refunded.";
+        public const string AccountRefundCompensationError = "Account refund compensation is failed.";
+        public const string MerchantNameLengthError = "Merchant name length is not appropriate.";
+        public const string MerchantNameMismatchError = "Merchant name is different from the previous record.";
+        public const string CardTokenMismatchError = "Card token is different from the previous record.";
+        public const string RefundAmountTooMuchError = "The total refund amount is higher than the sale amount.";
+        public const string RefundedAmountUpdateError = "Refunded amount could not be updated.";
+        public const string PointAccountNotFoundError = "Point account could not be found.";
+        public const string PointClientError = "Point client got an unexpected response.";
+        public const string PointAccountCreateError = "Point account could not be created.";
+        public const string SpendingLimitCompensateError = "Spending limit could not be compensated.";
+        public const string CustomerCreationCompensate = "Customer creation failed. Starting compensation.";
     }
     
     public static class CompensationOperationTypes
@@ -134,5 +156,11 @@ public class Constants
 
         public const string CancelAuthorization =
             "CANCEL_AUTHORIZATION";
+
+        public const string RestoreRefundBalance =
+            "RESTORE_REFUND_BALANCE";
+
+        public const string CompensateRefundAuthorization =
+            "COMPENSATE_REFUND_AUTHORIZATION";
     }
 }

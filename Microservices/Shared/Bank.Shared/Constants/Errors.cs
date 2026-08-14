@@ -284,4 +284,84 @@ public static class Errors
         new(
             ErrorCode.ChargeLimitCompensateErr,
             Constants.ExceptionMessages.ChargeLimitCompensateError);
+    
+    public static readonly Error AccountRefundError =
+        new(
+            ErrorCode.AccountRefundErr,
+            Constants.ExceptionMessages.AccountRefundError);
+    
+    public static readonly Error InvalidRefundTypeError =
+        new(
+            ErrorCode.InvalidRefundTypeErr,
+            Constants.ExceptionMessages.InvalidRefundTypeError);
+    
+    public static readonly Error TransactionNotExistError =
+        new(
+            ErrorCode.TransactionNotExistErr,
+            Constants.ExceptionMessages.TransactionNotExistError);
+    
+    public static readonly Error AmountRefundTypeMismatchError =
+        new(
+            ErrorCode.AmountRefundTypeMismatchErr,
+            Constants.ExceptionMessages.AmountRefundTypeMismatchError);
+    
+    public static readonly Error AuthorizationNotFoundError =
+        new(
+            ErrorCode.AuthorizationNotFoundErr,
+            Constants.ExceptionMessages.AuthorizationNotFoundError);
+    
+    public static readonly Error AssignStatusError =
+        new(
+            ErrorCode.AssignStatusErr,
+            Constants.ExceptionMessages.AssignStatusError);
+    
+    public static readonly Error TransactionAlreadyRefundedError =
+        new(
+            ErrorCode.TransactionAlreadyRefundedErr,
+            Constants.ExceptionMessages.TransactionAlreadyRefundedError);
+    
+    public static readonly Error AccountRefundCompensationError =
+        new(
+            ErrorCode.AccountRefundCompensationErr,
+            Constants.ExceptionMessages.AccountRefundCompensationError);
+    
+    public static readonly Error MerchantNameMismatchError =
+        new(
+            ErrorCode.MerchantNameMismatchErr,
+            Constants.ExceptionMessages.MerchantNameMismatchError);
+    
+    public static readonly Error CardTokenMismatchError =
+        new(
+            ErrorCode.CardTokenMismatchErr,
+            Constants.ExceptionMessages.CardTokenMismatchError);
+    
+    public static readonly Error RefundAmountTooMuchError =
+        new(
+            ErrorCode.RefundAmountTooMuchErr,
+            Constants.ExceptionMessages.RefundAmountTooMuchError);
+    
+    public static readonly Error RefundedAmountUpdateError =
+        new(
+            ErrorCode.RefundedAmountUpdateErr,
+            Constants.ExceptionMessages.RefundedAmountUpdateError);
+    
+    public static readonly Error PointAccountNotFoundError =
+        new(
+            ErrorCode.PointAccountNotFoundErr,
+            Constants.ExceptionMessages.PointAccountNotFoundError);
+    
+    public static readonly Error PointClientError =
+        new(
+            ErrorCode.PointClientErr,
+            Constants.ExceptionMessages.PointClientError);
+    
+    public static readonly Error PointAccountCreateError =
+        new(
+            ErrorCode.PointAccountCreateErr,
+            Constants.ExceptionMessages.PointAccountCreateError);
+    
+    public static readonly Error SpendingLimitCompensateError =
+        new(
+            ErrorCode.SpendingLimitCompensateErr,
+            Constants.ExceptionMessages.SpendingLimitCompensateError);
 }

@@ -18,7 +18,7 @@ public sealed class ChannelCodeJsonConverter
 
         try
         {
-            return ChannelCodeExtentions.FromDatabaseCode(code);
+            return ChannelCodeExtensions.FromDatabaseCode(code);
         }
         catch (ArgumentException ex)
         {

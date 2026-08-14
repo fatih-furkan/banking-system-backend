@@ -29,4 +29,6 @@ public class CreateAuthorizationResponse
     public decimal? TransactionAmount { get; set; }
     
     public long TransactionId { get; set; }
+    
+    public string? MerchantName { get; set; }
 }

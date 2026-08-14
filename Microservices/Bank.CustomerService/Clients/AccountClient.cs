@@ -76,4 +76,33 @@ public class AccountClient
 
         return ServiceResult<CreateChargeLimitResponse>.Success(result);
     }
+    
+    public async Task<ServiceResult<Unit>> CompensateCreateChargeLimitAsync(long customerId)
+    {
+        using var response = await _httpClient.PostAsJsonAsync(
+            "/api/charge-limit/compensate-create-charge-limit",
+            customerId
+        );
+
+        if (!response.IsSuccessStatusCode)
+        {
+            ErrorResponse? errorResponse = null;
+
+            try
+            {
+                errorResponse =
+                    await response.Content.ReadFromJsonAsync<ErrorResponse>();
+            }
+            catch (JsonException)
+            {
+            }
+
+            return ServiceResult<Unit>.Failure(
+                errorResponse?.Error ?? Errors.AccountClientError,
+                (int)response.StatusCode
+            );
+        }
+
+        return ServiceResult<Unit>.Success(new Unit());
+    }
 }

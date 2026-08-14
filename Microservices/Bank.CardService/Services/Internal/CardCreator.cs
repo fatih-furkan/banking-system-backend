@@ -12,13 +12,11 @@ namespace Bank.CardService.Services.Internal;
 public class CardCreator
 {
     private readonly AppDbContext _context;
-    private readonly CustomerClient _customerClient;
     private readonly AccountClient _accountClient;
 
     public CardCreator(AppDbContext context, CustomerClient customerClient, AccountClient accountClient)
     {
         _context = context;
-        _customerClient = customerClient;
         _accountClient = accountClient;
     }
     //should only be called from the saga.

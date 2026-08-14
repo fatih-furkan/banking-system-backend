@@ -1,6 +1,6 @@
 ﻿namespace Bank.Shared.Enums;
 
-public static class ChannelCodeExtentions
+public static class ChannelCodeExtensions
 {
     public static string ToDatabaseCode(this ChannelCode channel)
     {

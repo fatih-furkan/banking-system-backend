@@ -17,14 +17,20 @@ public class CustomerService
     private readonly AppDbContext _context;
     private readonly AccountClient _accountClient;
     private readonly AuthorizationClient _authorizationClient;
+    private readonly PointClient _pointClient;
+    private readonly ILogger<CustomerService> _logger;
 
     public CustomerService(AppDbContext context, 
         AccountClient accountClient,
-        AuthorizationClient authorizationClient)
+        AuthorizationClient authorizationClient,
+        PointClient pointClient,
+        ILogger<CustomerService> logger)
     {
         _context = context;
         _accountClient = accountClient;
         _authorizationClient = authorizationClient;
+        _pointClient = pointClient;
+        _logger = logger;
     }
 
     // Ne yapıyor? Müşterileri listeler veya ID'ye göre bulur.
@@ -38,82 +44,307 @@ public class CustomerService
         return await _context.Customers.FindAsync(customerId);
     }
 
-    public async Task<ServiceResult<CreateCustomerResponse>> AddCustomerAsync(CreateCustomerRequest createCustomerRequest)
+    public async Task<ServiceResult<CreateCustomerResponse>> AddCustomerAsync(
+    CreateCustomerRequest request)
     {
-        //Does tc consist of numbers?
-        bool onlyDigits = createCustomerRequest.Tc.All(char.IsDigit);
+        bool onlyDigits = request.Tc.All(char.IsDigit);
+
         if (!onlyDigits)
         {
-            return ServiceResult<CreateCustomerResponse>.Failure(Errors.TcError);
+            return ServiceResult<CreateCustomerResponse>.Failure(
+                Errors.TcError
+            );
         }
-        
-        //Is the tc unique?
-        var existingTc = await _context.Customers
-            .FirstOrDefaultAsync(account => account.Tc == createCustomerRequest.Tc);
-        
-        if (existingTc == null)
+
+        var existingCustomer = await _context.Customers
+            .FirstOrDefaultAsync(customer =>
+                customer.Tc == request.Tc
+            );
+
+        if (existingCustomer is not null)
         {
-            // Müşteriyi Sequence'ten aldığı ID ile veritabanına kaydeder.
-            var customerId = await GetNextCustomerIdSequenceValueAsync();
+            return ServiceResult<CreateCustomerResponse>.Failure(
+                Errors.TcAssignedError
+            );
+        }
+
+        long customerId =
+            await GetNextCustomerIdSequenceValueAsync();
+
+        Guid operationId = Guid.NewGuid();
+
+        string? pointAccountNo = null;
+        
+        bool customerCreated = false;
+        bool pointAccountCreated = false;
+        bool chargeLimitCreated = false;
+        bool spendingLimitCreated = false;
+        
+        try
+        {
             var customer = new Customer
             {
                 CustomerId = customerId,
-                Name = createCustomerRequest.Name,
-                Surname = createCustomerRequest.Surname,
-                Tc = createCustomerRequest.Tc,
+                Name = request.Name,
+                Surname = request.Surname,
+                Tc = request.Tc,
+
+                // Pending until all related resources are created.
                 Status = "2"
             };
+
             _context.Customers.Add(customer);
             await _context.SaveChangesAsync();
 
-            var createChargeLimitResult = await _accountClient.CreateChargeLimitAsync(
-                new CreateChargeLimitRequest
-                {
-                    AnnualLimit = Constants.Limits.AnnualChargeLimit,
-                    MonthlyLimit = Constants.Limits.MonthlyChargeLimit,
-                    DailyLimit = Constants.Limits.DailyChargeLimit,
-                    CustomerId = customerId
-                });
+            customerCreated = true;
+
+            // 1. Create point account
+            var createPointAccountResult =
+                await _pointClient.CreatePointAccountAsync(
+                    new CreatePointAccountRequest
+                    {
+                        CustomerId = customerId
+                    }
+                );
+
+            if (!createPointAccountResult.IsSuccess)
+            {
+                throw new GeneralException(
+                    createPointAccountResult.Error
+                        ?? Errors.PointAccountCreateError,
+                    createPointAccountResult.StatusCode
+                );
+            }
+
+            pointAccountNo = createPointAccountResult.Data;
+
+            pointAccountCreated = true;
+
+            // 2. Create charge limit
+            var createChargeLimitResult =
+                await _accountClient.CreateChargeLimitAsync(
+                    new CreateChargeLimitRequest
+                    {
+                        AnnualLimit =
+                            Constants.Limits.AnnualChargeLimit,
+                        MonthlyLimit =
+                            Constants.Limits.MonthlyChargeLimit,
+                        DailyLimit =
+                            Constants.Limits.DailyChargeLimit,
+                        CustomerId = customerId
+                    }
+                );
 
             if (!createChargeLimitResult.IsSuccess)
             {
-                return ServiceResult<CreateCustomerResponse>
-                    .Failure(createChargeLimitResult.Error ?? Errors.ChargeLimitCreateError,
-                        createChargeLimitResult.StatusCode);
+                throw new GeneralException(
+                    createChargeLimitResult.Error
+                        ?? Errors.ChargeLimitCreateError,
+                    createChargeLimitResult.StatusCode
+                );
             }
-            
-            var createSpendingLimitResult = await _authorizationClient.AddSpendingLimitAsync(
-                new CreateSpendingLimitRequest
-                {
-                    AnnualLimit = Constants.Limits.AnnualSpendingLimit,
-                    MonthlyLimit = Constants.Limits.MonthlySpendingLimit,
-                    DailyLimit = Constants.Limits.DailySpendingLimit,
-                    CustomerId = customerId
-                });
+
+            chargeLimitCreated = true;
+
+            // 3. Create spending limit
+            var createSpendingLimitResult =
+                await _authorizationClient.AddSpendingLimitAsync(
+                    new CreateSpendingLimitRequest
+                    {
+                        AnnualLimit =
+                            Constants.Limits.AnnualSpendingLimit,
+                        MonthlyLimit =
+                            Constants.Limits.MonthlySpendingLimit,
+                        DailyLimit =
+                            Constants.Limits.DailySpendingLimit,
+                        CustomerId = customerId
+                    }
+                );
 
             if (!createSpendingLimitResult.IsSuccess)
             {
-                return ServiceResult<CreateCustomerResponse>
-                    .Failure(createSpendingLimitResult.Error ?? Errors.SpendingLimitCreateError,
-                        createSpendingLimitResult.StatusCode);
+                throw new GeneralException(
+                    createSpendingLimitResult.Error
+                        ?? Errors.SpendingLimitCreateError,
+                    createSpendingLimitResult.StatusCode
+                );
             }
 
-            customer.Status = createCustomerRequest.Status;
+            spendingLimitCreated = true;
+
+            // Everything succeeded.
+            customer.Status = "1";
+
             await _context.SaveChangesAsync();
             
-            CreateCustomerResponse response = new CreateCustomerResponse
+            return ServiceResult<CreateCustomerResponse>.Success(
+                new CreateCustomerResponse
+                {
+                    Name = customer.Name,
+                    Surname = customer.Surname,
+                    Tc = customer.Tc,
+                    CustomerId = customer.CustomerId,
+                    Status = customer.Status
+                }
+            );
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                Constants.ExceptionMessages.CustomerCreationCompensate);
+
+            await CompensateCustomerCreationAsync(
+                customerId,
+                spendingLimitCreated,
+                chargeLimitCreated,
+                pointAccountCreated,
+                customerCreated,
+                operationId,
+                pointAccountNo!
+            );
+
+            throw;
+        }
+    }
+    
+    private async Task CompensateCustomerCreationAsync(
+    long customerId,
+    bool spendingLimitCreated,
+    bool chargeLimitCreated,
+    bool pointAccountCreated,
+    bool customerCreated,
+    Guid operationId,
+    string pointAccountNo)
+    {
+        // 1. Remove spending limit
+        if (spendingLimitCreated)
+        {
+            try
             {
-                Name = customer.Name,
-                Surname = customer.Surname,
-                Tc = customer.Tc,
-                CustomerId = customer.CustomerId,
-                Status = customer.Status
-            };
-            return ServiceResult<CreateCustomerResponse>.Success(response);
+                var result =
+                    await _authorizationClient
+                        .CompensateCreateSpendingLimitAsync(
+                            customerId
+                        );
+
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Spending limit creation compensation failed. " +
+                        "CustomerId: {CustomerId}, " +
+                        "OperationId: {OperationId}",
+                        customerId,
+                        operationId
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Spending limit creation compensation threw an exception. " +
+                    "CustomerId: {CustomerId}, " +
+                    "OperationId: {OperationId}",
+                    customerId,
+                    operationId
+                );
+            }
         }
 
-        return ServiceResult<CreateCustomerResponse>.Failure(Errors.TcAssignedError);
-    } 
+        // 2. Remove charge limit
+        if (chargeLimitCreated)
+        {
+            try
+            {
+                var result =
+                    await _accountClient
+                        .CompensateCreateChargeLimitAsync(
+                            customerId
+                        );
+
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Charge limit creation compensation failed. " +
+                        "CustomerId: {CustomerId}, " +
+                        "OperationId: {OperationId}",
+                        customerId,
+                        operationId
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Charge limit creation compensation threw an exception. " +
+                    "CustomerId: {CustomerId}, " +
+                    "OperationId: {OperationId}",
+                    customerId,
+                    operationId
+                );
+            }
+        }
+
+        // 3. Remove point account
+        if (pointAccountCreated)
+        {
+            try
+            {
+                var result =
+                    await _pointClient
+                        .CompensateCreatePointAccountAsync(
+                            pointAccountNo
+                        );
+
+                if (!result.IsSuccess)
+                {
+                    _logger.LogError(
+                        "Point account creation compensation failed. " +
+                        "CustomerId: {CustomerId}, " +
+                        "OperationId: {OperationId}",
+                        customerId,
+                        operationId
+                    );
+                }
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Point account creation compensation threw an exception. " +
+                    "CustomerId: {CustomerId}, " +
+                    "OperationId: {OperationId}",
+                    customerId,
+                    operationId
+                );
+            }
+        }
+
+        // 4. Remove customer
+        if (customerCreated)
+        {
+            try
+            {
+                await _context.Customers
+                    .Where(customer =>
+                        customer.CustomerId == customerId)
+                    .ExecuteDeleteAsync();
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(
+                    exception,
+                    "Customer creation compensation failed. " +
+                    "CustomerId: {CustomerId}, " +
+                    "OperationId: {OperationId}",
+                    customerId,
+                    operationId
+                );
+            }
+        }
+    }
 
     private async Task<long> GetNextCustomerIdSequenceValueAsync()
     {

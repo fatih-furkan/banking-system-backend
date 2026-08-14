@@ -56,6 +56,16 @@ namespace Bank.AuthorizationService.Migrations
                         .HasColumnType("NUMBER(18,0)")
                         .HasColumnName("CUSTOMER_ID");
 
+                    b.Property<string>("MerchantName")
+                        .HasMaxLength(50)
+                        .HasColumnType("NVARCHAR2(50)")
+                        .HasColumnName("MERCHANT_NAME");
+
+                    b.Property<long?>("OriginalTransactionId")
+                        .HasPrecision(18)
+                        .HasColumnType("NUMBER(18)")
+                        .HasColumnName("ORIGINAL_TRXN_ID");
+
                     b.Property<int>("Otc")
                         .HasPrecision(4)
                         .HasColumnType("NUMBER(4,0)")
@@ -65,6 +75,11 @@ namespace Bank.AuthorizationService.Migrations
                         .HasPrecision(4)
                         .HasColumnType("NUMBER(4,0)")
                         .HasColumnName("OTS");
+
+                    b.Property<decimal?>("RefundedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("DECIMAL(18,2)")
+                        .HasColumnName("REFUNDED_AMOUNT");
 
                     b.Property<decimal?>("TransactionAmount")
                         .HasPrecision(18, 2)

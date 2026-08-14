@@ -11,7 +11,6 @@ namespace Bank.CampaignService
             var builder = WebApplication.CreateBuilder(args);
 
             // 1. AppDbContext ve Oracle EF Core Konfigürasyonu
-            // appsettings.json dosyasındaki "OracleDb" connection string'ini kullanır
             builder.Services.AddDbContext<AppDbContext>(options =>
                 options.UseOracle(builder.Configuration.GetConnectionString("OracleDb")));
 

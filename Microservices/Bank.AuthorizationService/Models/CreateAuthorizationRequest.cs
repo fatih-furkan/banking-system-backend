@@ -76,4 +76,15 @@ public class CreateAuthorizationRequest
     
     [Required]
     public long? TransactionId { get; set; }
+    
+    [StringLength(
+        50,
+        MinimumLength = 1,
+        ErrorMessage = Constants.ExceptionMessages.MerchantNameLengthError
+    )]
+    public string? MerchantName { get; set; }
+    
+    public long? OriginalTransactionId { get; set; }
+    
+    public decimal? RefundedAmount { get; set; }
 }

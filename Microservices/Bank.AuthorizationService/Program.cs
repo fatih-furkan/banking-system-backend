@@ -65,6 +65,7 @@ builder.Services.AddScoped<AuthorizationService>();
 builder.Services.AddScoped<SpendingLimitService>();
 builder.Services.AddScoped<SpendingLimitSaga>();
 builder.Services.AddScoped<AccountSaleSaga>();
+builder.Services.AddScoped<AccountRefundSaga>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();

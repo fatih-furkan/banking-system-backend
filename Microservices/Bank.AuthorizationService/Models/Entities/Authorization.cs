@@ -29,4 +29,10 @@ public class Authorization
     public decimal? TransactionAmount { get; set; }
     
     public long TransactionId { get; set; }
+    
+    public string? MerchantName { get; set; }
+    
+    public long? OriginalTransactionId { get; set; }
+    
+    public decimal? RefundedAmount { get; set; }
 }

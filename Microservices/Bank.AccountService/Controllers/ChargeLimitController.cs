@@ -122,4 +122,23 @@ public class ChargeLimitController : Controller
 
         return Ok(result.Data);
     }
+    
+    [HttpPost("compensate-create-charge-limit")]
+    public async Task<IActionResult> CompensateCreateChargeLimit(
+       [FromBody] long customerId)
+    {
+        var result =
+            await _chargeLimitService
+                .CompensateCreateChargeLimitAsync(customerId);
+
+        if (!result.IsSuccess)
+        {
+            return StatusCode(
+                result.StatusCode,
+                new ErrorResponse(result.Error)
+            );
+        }
+
+        return Ok(result.Data);
+    }
 }

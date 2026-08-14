@@ -70,7 +70,7 @@ public class AppDbContext: DbContext
             entity.Property(x => x.ChannelCode)
                 .HasConversion(
                     value => value.ToDatabaseCode(),
-                    value => ChannelCodeExtentions.FromDatabaseCode(value)
+                    value => ChannelCodeExtensions.FromDatabaseCode(value)
                 )
                 .HasColumnName("CHANNEL_CODE")
                 .HasMaxLength(3)
@@ -91,6 +91,18 @@ public class AppDbContext: DbContext
 
             entity.HasIndex(e => e.TransactionId)
                 .IsUnique();
+
+            entity.Property(e => e.MerchantName)
+                .HasColumnName("MERCHANT_NAME")
+                .HasMaxLength(50);
+            
+            entity.Property(e => e.OriginalTransactionId)
+                .HasColumnName("ORIGINAL_TRXN_ID")
+                .HasPrecision(18);
+            
+            entity.Property(e => e.RefundedAmount)
+                .HasColumnName("REFUNDED_AMOUNT")
+                .HasPrecision(18,2);
         });
         
         modelBuilder.Entity<SpendingLimit>(entity =>
