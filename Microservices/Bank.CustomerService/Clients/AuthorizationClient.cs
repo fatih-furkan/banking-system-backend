@@ -1,7 +1,7 @@
 
 ﻿using System.Text.Json;
 
-﻿// Yapı olarak AuthorizationService mikroservisine bağlanıp harcama limiti (/api/spending-limit) oluşturmakla görevli.
+
 
 using Bank.CustomerService.Models.ClientModels;
 using Bank.Shared;

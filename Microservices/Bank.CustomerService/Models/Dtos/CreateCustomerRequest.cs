@@ -1,8 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;  // logically same with import, data validation. MaxLength and MinLength.
+﻿using System.ComponentModel.DataAnnotations; 
 
-namespace Bank.CustomerService.Models.Dtos;   // address of class.
+namespace Bank.CustomerService.Models.Dtos;   
 
-public class CreateCustomerRequest           // Create customer request body.
+public class CreateCustomerRequest          
 {
     [MaxLength(50, ErrorMessage = "Name is too long.")]
     [MinLength(1, ErrorMessage = "Name cannot be empty string.")]

@@ -1,8 +1,4 @@
-﻿// Mimarinin dış dünyaya açılan kapısına geldik. CustomerController.cs sınıfı, 
-//istemcilerden (Frontend, Mobile, Postman veya API Gateway) gelen HTTP isteklerini karşılayıp 
-// CustomerService'e ileten ve sonuçları istemciye uygun HTTP durum kodları (Status Codes) ile dönen API Controller katmanıdır.
-
-using Bank.CustomerService.Models.Dtos;
+﻿using Bank.CustomerService.Models.Dtos;
 using Bank.Shared;
 using Bank.Shared.Constants;
 using Microsoft.AspNetCore.Mvc;

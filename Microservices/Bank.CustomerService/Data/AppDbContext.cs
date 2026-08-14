@@ -1,7 +1,4 @@
-﻿// sınıflar (Entity'ler) ile veritabanındaki tablolar/sütunlar arasındaki köprüyü ve ilişkiyi kuran ORM (Object-Relational Mapping) yapılandırma dosyasıdır.
-
-
-using Bank.CustomerService.Models.Entities;
+﻿using Bank.CustomerService.Models.Entities;
 using Microsoft.EntityFrameworkCore;
 namespace Bank.CustomerService.Data;
 

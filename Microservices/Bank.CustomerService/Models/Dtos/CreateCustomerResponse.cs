@@ -1,9 +1,6 @@
-﻿// Response DTO for creating a customer in the Bank.CustomerService microservice.
+﻿namespace Bank.CustomerService.Models.Dtos; 
 
-
-namespace Bank.CustomerService.Models.Dtos; 
-
-public class CreateCustomerResponse  // Müşteri oluşturma isteğinin yanıtını taşıyacak olan yanıt sınıfını tanımlıyor
+public class CreateCustomerResponse  
 {
     public string Name { get; set; } = null!;
     public string Surname { get; set; } = null!;
