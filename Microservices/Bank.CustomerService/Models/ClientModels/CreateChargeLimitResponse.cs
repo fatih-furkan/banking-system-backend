@@ -1,4 +1,6 @@
-﻿namespace Bank.CustomerService.Models.ClientModels;
+﻿// Response model. 
+
+namespace Bank.CustomerService.Models.ClientModels;
 
 public class CreateChargeLimitResponse
 {

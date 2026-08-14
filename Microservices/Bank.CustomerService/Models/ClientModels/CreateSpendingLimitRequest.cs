@@ -1,6 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// Spending limit. 
 
-namespace Bank.CustomerService.Models.ClientModels;
+using System.ComponentModel.DataAnnotations;
+
+namespace Bank.CustomerService.Models.ClientModels;  //ClientModels 
 
 public class CreateSpendingLimitRequest
 {

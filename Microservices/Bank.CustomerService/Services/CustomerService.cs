@@ -1,4 +1,6 @@
-﻿using Bank.CustomerService.Clients;
+﻿// Target framework. 
+
+using Bank.CustomerService.Clients;
 using Bank.CustomerService.Data;
 using Bank.CustomerService.Models.ClientModels;
 using Bank.CustomerService.Models.Dtos;
@@ -11,6 +13,7 @@ namespace Bank.CustomerService.Services;
 
 public class CustomerService
 {
+    // Dependencies
     private readonly AppDbContext _context;
     private readonly AccountClient _accountClient;
     private readonly AuthorizationClient _authorizationClient;
@@ -24,11 +27,12 @@ public class CustomerService
         _authorizationClient = authorizationClient;
     }
 
+    // Ne yapıyor? Müşterileri listeler veya ID'ye göre bulur.
     public async Task<List<Customer>> GetAllCustomersAsync()
     {
         return await _context.Customers.ToListAsync();
     }
-    
+    // Add Customer method.
     public async Task<Customer?> GetCustomerByCustomerIdAsync(long customerId)
     {
         return await _context.Customers.FindAsync(customerId);
@@ -49,6 +53,7 @@ public class CustomerService
         
         if (existingTc == null)
         {
+            // Müşteriyi Sequence'ten aldığı ID ile veritabanına kaydeder.
             var customerId = await GetNextCustomerIdSequenceValueAsync();
             var customer = new Customer
             {

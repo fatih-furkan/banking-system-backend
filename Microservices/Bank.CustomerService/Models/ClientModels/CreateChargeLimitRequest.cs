@@ -1,4 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿// CreateChargeLimitResponse nesnesinin istek (Request) karşılığıdır. Yani CustomerService, kart/limit servisinden yükleme limiti oluşturmasını isterken bu formatta veri gönderir.
+
+using System.ComponentModel.DataAnnotations;
 
 namespace Bank.CustomerService.Models.ClientModels;
 

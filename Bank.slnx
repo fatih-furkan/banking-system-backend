@@ -2,6 +2,7 @@
   <Folder Name="/Microservices/">
     <Project Path="Microservices/Bank.AccountService/Bank.AccountService.csproj" />
     <Project Path="Microservices/Bank.AuthorizationService/Bank.AuthorizationService.csproj" />
+    <Project Path="Microservices/Bank.CampaignService/Bank.CampaignService.csproj" Id="74eaa8af-fe05-471c-ab96-0a28e63e2b3c" />
     <Project Path="Microservices/Bank.CardService/Bank.CardService.csproj" />
     <Project Path="Microservices/Bank.CustomerService/Bank.CustomerService.csproj" />
   </Folder>
