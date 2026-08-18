@@ -1,6 +1,7 @@
 ﻿using Bank.AuthorizationService.Models.Entities;
 using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
+using Bank.TransactionService.Models.Entities;
 
 namespace Bank.AuthorizationService.Data;
 
@@ -16,7 +17,8 @@ public class AppDbContext: DbContext
     public DbSet<CurrentSpendingLimit> CurrentSpendingLimits => Set<CurrentSpendingLimit>();
     public DbSet<CompletedSagaOperation> CompletedSagaOperations { get; set; }
         = null!;
-    
+    public DbSet<PointTransactionLog> PointTransactionLogs { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Authorization>(entity =>
@@ -166,8 +168,9 @@ public class AppDbContext: DbContext
                     .HasColumnType("DATE");
             }
         );
-        
-        modelBuilder.Entity<CompletedSagaOperation>(entity =>
+
+
+    modelBuilder.Entity<CompletedSagaOperation>(entity =>
         {
             entity.ToTable("COMPLETED_SAGA_OPERATIONS");
 
@@ -189,6 +192,7 @@ public class AppDbContext: DbContext
             entity.Property(operation => operation.CompletedAt)
                 .HasColumnName("COMPLETED_AT")
                 .IsRequired();
-        });
+
+});
     }
 }

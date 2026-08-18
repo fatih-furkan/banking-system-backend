@@ -66,6 +66,7 @@ builder.Services.AddScoped<SpendingLimitService>();
 builder.Services.AddScoped<SpendingLimitSaga>();
 builder.Services.AddScoped<AccountSaleSaga>();
 builder.Services.AddScoped<AccountRefundSaga>();
+builder.Services.AddScoped<IPointLogService, PointLogService>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
