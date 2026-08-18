@@ -3,6 +3,7 @@ using System;
 using Bank.CampaignService.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Oracle.EntityFrameworkCore.Metadata;
 
@@ -11,9 +12,11 @@ using Oracle.EntityFrameworkCore.Metadata;
 namespace Bank.CampaignService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260818113131_AddRewardPointToCampaignCriterion")]
+    partial class AddRewardPointToCampaignCriterion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -101,13 +104,9 @@ namespace Bank.CampaignService.Migrations
                         .HasColumnType("NVARCHAR2(10)")
                         .HasColumnName("OTC");
 
-                    b.Property<int>("RewardCalculationType")
+                    b.Property<int>("RewardPoint")
                         .HasColumnType("NUMBER(10)")
-                        .HasColumnName("REWARD_CALCULATION_TYPE");
-
-                    b.Property<decimal>("RewardValue")
-                        .HasColumnType("NUMBER(18,2)")
-                        .HasColumnName("REWARD_VALUE");
+                        .HasColumnName("REWARD_POINT");
 
                     b.Property<DateTime?>("TransactionEndDate")
                         .HasColumnType("DATE")
