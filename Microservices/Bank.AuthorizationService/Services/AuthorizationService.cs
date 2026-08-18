@@ -9,7 +9,6 @@ using Bank.Shared;
 using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Query;
 using Oracle.ManagedDataAccess.Client;
 
 namespace Bank.AuthorizationService.Services;
@@ -20,6 +19,7 @@ public class AuthorizationService
     private readonly CardClient _cardClient;
     private readonly AccountClient _accountClient;
     private readonly CustomerClient _customerClient;
+    private readonly PointClient _pointClient;
     private readonly SpendingLimitSaga _spendingLimitSaga;
     private readonly AccountSaleSaga _accountSaleSaga;
     private readonly AccountRefundSaga _accountRefundSaga;
@@ -32,12 +32,14 @@ public class AuthorizationService
         AccountSaleSaga accountSaleSaga,
         AccountRefundSaga accountRefundSaga,
         ILogger<AuthorizationService> logger,
-        CustomerClient customerClient)
+        CustomerClient customerClient,
+        PointClient pointClient)
     {
         _context = context;
         _cardClient = cardClient;
         _accountClient = accountClient;
         _customerClient = customerClient;
+        _pointClient = pointClient;
         _spendingLimitSaga = spendingLimitSaga;
         _accountSaleSaga = accountSaleSaga;
         _accountRefundSaga = accountRefundSaga;
@@ -337,6 +339,19 @@ public class AuthorizationService
             }
 
             authorizationGuid = authorizationResult.Data.Guid;
+
+            var addPointResult = await _pointClient.AddPointAsync(new AddPointRequest
+                {
+                    Amount = 0.01m, //todo point amount has to be calculated before
+                    CustomerId = accountSaleSagaResult.Data.CustomerId,
+                    TransactionId = request.TransactionId,
+                    CardNo = request.CardNo,
+                    ChannelCode = request.ChannelCode
+                }
+            );
+            
+            
+            //todo log record
             
             return ServiceResult<SaleResponse>.Success(
                 new SaleResponse

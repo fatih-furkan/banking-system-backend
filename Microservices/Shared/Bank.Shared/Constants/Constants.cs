@@ -9,6 +9,8 @@ public class Constants
         public const int Refund = 30;
         public const int Payment = 40;
         public const int Sale = 50;
+        public const int EarnPoint = 60;
+        public const int UsePoint = 70;
     }
 
     public static class Ots
@@ -34,6 +36,16 @@ public class Constants
         {
             public const int Complete = 10;
             public const int Partial = 20;
+        }
+
+        public class EarnPoint
+        {
+            public const int Default = 10;
+        }
+
+        public class UsePoint
+        {
+            public const int Default = 10;
         }
     }
 
@@ -135,6 +147,8 @@ public class Constants
         public const string PointAccountCreateError = "Point account could not be created.";
         public const string SpendingLimitCompensateError = "Spending limit could not be compensated.";
         public const string CustomerCreationCompensate = "Customer creation failed. Starting compensation.";
+        public const string PointServiceError = "Point service did not serve as expected.";
+        public const string AddPointError = "Point could not be added.";
     }
     
     public static class CompensationOperationTypes
@@ -162,5 +176,8 @@ public class Constants
 
         public const string CompensateRefundAuthorization =
             "COMPENSATE_REFUND_AUTHORIZATION";
+
+        public const string ReverseAddPointEarnedPoint =
+            "REVERSE_ADD_POINT_EARNED_POINT";
     }
 }
