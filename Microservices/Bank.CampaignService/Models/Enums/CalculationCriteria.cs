@@ -7,7 +7,7 @@ namespace Bank.CampaignService.Models.Enums
 {
     public enum CalculationCriteria
     {
-        TotalAmount = 1,  // ????????
+        TotalAmount = 1,  // ????????          
         TransactionCount = 2
     }
 }

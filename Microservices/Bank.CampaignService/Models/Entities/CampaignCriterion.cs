@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Bank.CampaignService.Models.Enums;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace Bank.CampaignService.Models.Entities
 {
@@ -18,9 +20,16 @@ namespace Bank.CampaignService.Models.Entities
         [Column("CAMPAIGN_ID")]                                  // Foreign key to Campaign table
         public long CampaignId { get; set; }
 
-
+        [JsonIgnore]
         [NotMapped]
         public virtual Campaign? Campaign { get; set; }
+
+        
+        [Column("REWARD_CALCULATION_TYPE")]
+        public RewardCalculationType RewardCalculationType { get; set; } = RewardCalculationType.Fixed;
+
+        [Column("REWARD_VALUE", TypeName = "NUMBER(18,2)")]
+        public decimal RewardValue { get; set; }
 
 
         [Column("MIN_AMOUNT", TypeName = "NUMBER(18,2)")]
