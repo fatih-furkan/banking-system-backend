@@ -374,4 +374,9 @@ public static class Errors
         new(
             ErrorCode.AddPointErr,
             Constants.ExceptionMessages.AddPointError);
+    
+    public static readonly Error CampaignClientError =
+        new(
+            ErrorCode.CampaignClientErr,
+            Constants.ExceptionMessages.CampaignClientError);
 }

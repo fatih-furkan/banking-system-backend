@@ -1,4 +1,4 @@
-﻿namespace Bank.CampaignService.Models.Enums
+﻿namespace Bank.Shared.Enums
 {
     public enum RewardCalculationType
     {

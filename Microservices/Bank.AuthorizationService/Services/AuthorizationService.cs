@@ -20,6 +20,7 @@ public class AuthorizationService
     private readonly AccountClient _accountClient;
     private readonly CustomerClient _customerClient;
     private readonly PointClient _pointClient;
+    private readonly CampaignClient _campaignClient;
     private readonly SpendingLimitSaga _spendingLimitSaga;
     private readonly AccountSaleSaga _accountSaleSaga;
     private readonly AccountRefundSaga _accountRefundSaga;
@@ -33,13 +34,15 @@ public class AuthorizationService
         AccountRefundSaga accountRefundSaga,
         ILogger<AuthorizationService> logger,
         CustomerClient customerClient,
-        PointClient pointClient)
+        PointClient pointClient,
+        CampaignClient campaignClient)
     {
         _context = context;
         _cardClient = cardClient;
         _accountClient = accountClient;
         _customerClient = customerClient;
         _pointClient = pointClient;
+        _campaignClient = campaignClient;
         _spendingLimitSaga = spendingLimitSaga;
         _accountSaleSaga = accountSaleSaga;
         _accountRefundSaga = accountRefundSaga;
@@ -340,18 +343,68 @@ public class AuthorizationService
 
             authorizationGuid = authorizationResult.Data.Guid;
 
-            var addPointResult = await _pointClient.AddPointAsync(new AddPointRequest
+            //errors in point section should not affect the sale process.
+            try
+            {
+                var getCampaignsResult = await _campaignClient
+                    .GetCampaigns(status: "1", targetDate: DateTime.UtcNow);
+                if (!getCampaignsResult.IsSuccess)
                 {
-                    Amount = 0.01m, //todo point amount has to be calculated before
-                    CustomerId = accountSaleSagaResult.Data.CustomerId,
-                    TransactionId = request.TransactionId,
-                    CardNo = request.CardNo,
-                    ChannelCode = request.ChannelCode
+                    //todo log - campaigns could not be obtained
                 }
-            );
+
+                else
+                {
+                    foreach (Campaign campaign in getCampaignsResult.Data!)
+                    {
+                        foreach (CampaignCriterion criterion in campaign.Criteria)
+                        {
+                            if (criterion.MinAmount <= request.Amount &&
+                                criterion.MaxAmount >= request.Amount)
+                            {
+                                if (criterion.RewardCalculationType == RewardCalculationType.Fixed)
+                                {
+                                    var addPointResult = await _pointClient.AddPointAsync(
+                                        new AddPointRequest
+                                        {
+                                            Amount = criterion.RewardValue,
+                                            CustomerId = accountSaleSagaResult.Data.CustomerId,
+                                            TransactionId = request.TransactionId,
+                                            CardNo = request.CardNo,
+                                            ChannelCode = request.ChannelCode
+                                        }
+                                    );
+                                }
+
+                                else if (criterion.RewardCalculationType == RewardCalculationType.Percentage)
+                                {
+                                    var addPointResult = await _pointClient.AddPointAsync(
+                                        new AddPointRequest
+                                        {
+                                            Amount = decimal.Round(
+                                                request.Amount.Value * criterion.RewardValue / 100m,
+                                                2,
+                                                MidpointRounding.AwayFromZero
+                                            ),
+                                            CustomerId = accountSaleSagaResult.Data.CustomerId,
+                                            TransactionId = request.TransactionId,
+                                            CardNo = request.CardNo,
+                                            ChannelCode = request.ChannelCode
+                                        }
+                                    );
+                                }
+
+                                //todo log
+                            }
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                //todo log
+            }
             
-            
-            //todo log record
             
             return ServiceResult<SaleResponse>.Success(
                 new SaleResponse

@@ -71,6 +71,17 @@ builder.Services.AddHttpClient<PointClient>(client =>
     client.BaseAddress = new Uri(baseAddress);
 });
 
+builder.Services.AddHttpClient<CampaignClient>(client =>
+{
+    string baseAddress =
+        builder.Configuration["Services:CampaignService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.CampaignServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
+});
+
 
 builder.Services.AddScoped<AuthorizationService>();
 builder.Services.AddScoped<SpendingLimitService>();

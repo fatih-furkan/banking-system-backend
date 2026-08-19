@@ -2,13 +2,13 @@
 // Represents the lifecycle status of a campaign.
 // ----------------------------------------------
 
-namespace Bank.CampaignService.Models.Enums
+namespace Bank.Shared.Enums
 {
     public enum CampaignStatus
     {
-        Draft = 0,  // Campaign is created but not yet published
+        Draft = 2,  // Campaign is created but not yet published
         Active = 1,
-        Passive = 2,
+        Passive = 0,
 
 
     }
