@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Bank.AuthorizationService.Models;
+namespace Bank.AuthorizationService.Models.Dtos;
 
 public class AssignStatusRequest
 {

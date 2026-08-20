@@ -217,21 +217,6 @@ public class PointService
 
             pointAdded = true;
             
-            // var authorizationRequest = new CreateAuthorizationRequest
-            // {
-            //     AccountNo = null,
-            //     Balance = thePointAccount.EarnedPoint,
-            //     CardToken = cardToken,
-            //     ChannelCode = request.ChannelCode!.Value,
-            //     CustomerId = thePointAccount.CustomerId,
-            //     Otc = Constants.Otcs.EarnPoint,
-            //     Ots = Constants.Ots.EarnPoint.Default,
-            //     TransactionAmount = amount,
-            //     TransactionDescription = "Earn point",
-            //     TransactionStatus = "1",
-            //     TransactionId = request.TransactionId
-            // };
-            
             return ServiceResult<AddPointResponse>.Success(
                 new AddPointResponse
                 {
