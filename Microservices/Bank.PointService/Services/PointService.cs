@@ -40,7 +40,31 @@ public class PointService
     {
         return await _context.PointAccounts.FindAsync(accountNo);
     }
+
+    public async Task<decimal?> GetEarnedPointByCustomerIdAsync(long customerId)
+    {
+        var account = await _context.PointAccounts
+            .SingleOrDefaultAsync(account => account.CustomerId == customerId);
+
+        return account?.EarnedPoint;
+    } 
     
+    public async Task<decimal?> GetUsedPointByCustomerIdAsync(long customerId)
+    {
+        var account = await _context.PointAccounts
+            .SingleOrDefaultAsync(account => account.CustomerId == customerId);
+
+        return account?.UsedPoint;
+    } 
+    
+    public async Task<decimal?> GetExpiredPointByCustomerIdAsync(long customerId)
+    {
+        var account = await _context.PointAccounts
+            .SingleOrDefaultAsync(account => account.CustomerId == customerId);
+
+        return account?.ExpiredPoint;
+    } 
+        
     public async Task<ServiceResult<CreatePointAccountResponse?>> AddPointAccountAsync(
         CreatePointAccountRequest request)
     {

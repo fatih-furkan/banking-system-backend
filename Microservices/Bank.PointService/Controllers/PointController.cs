@@ -34,6 +34,41 @@ public class PointController: ControllerBase
         else return Ok(account);
     }
     
+    [HttpGet("{customerId:long}/earned-point")]
+    public async Task<IActionResult> GetEarnedPointByCustomerId(long customerId)
+    {
+        var earnedPoint = await _pointService.GetEarnedPointByCustomerIdAsync(customerId);
+        if (earnedPoint == null)
+        {
+            return NotFound(new ErrorResponse(Errors.PointAccountNotFoundError));
+        }
+        else return Ok(earnedPoint);
+    }
+
+    
+    [HttpGet("{customerId:long}/expired-point")]
+    public async Task<IActionResult> GetExpiredPointByCustomerId(long customerId)
+    {
+        var expiredPoint = await _pointService.GetExpiredPointByCustomerIdAsync(customerId);
+        if (expiredPoint == null)
+        {
+            return NotFound(new ErrorResponse(Errors.PointAccountNotFoundError));
+        }
+        else return Ok(expiredPoint);
+    }
+
+    
+    [HttpGet("{customerId:long}/used-point")]
+    public async Task<IActionResult> GetUsedPointByCustomerId(long customerId)
+    {
+        var usedPoint = await _pointService.GetUsedPointByCustomerIdAsync(customerId);
+        if (usedPoint == null)
+        {
+            return NotFound(new ErrorResponse(Errors.PointAccountNotFoundError));
+        }
+        else return Ok(usedPoint);
+    }
+
     [HttpPost]
     public async Task<IActionResult> Add(CreatePointAccountRequest createPointAccountRequest)
     {
