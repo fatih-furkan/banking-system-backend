@@ -118,7 +118,7 @@ public class PointController: ControllerBase
     }
     
     [HttpPost("add-point")]
-    public async Task<IActionResult> Deposit(AddPointRequest request)
+    public async Task<IActionResult> AddPoint(AddPointRequest request)
     {
         
         var result = await _pointService.AddPointAsync(request);
