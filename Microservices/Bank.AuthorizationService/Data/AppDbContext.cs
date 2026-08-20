@@ -105,7 +105,8 @@ public class AppDbContext: DbContext
             entity.Property(e => e.RefundedAmount)
                 .HasColumnName("REFUNDED_AMOUNT")
                 .HasPrecision(18,2);
-        });
+           }
+         );
         
         modelBuilder.Entity<SpendingLimit>(entity =>
             {
@@ -170,7 +171,7 @@ public class AppDbContext: DbContext
         );
 
 
-    modelBuilder.Entity<CompletedSagaOperation>(entity =>
+        modelBuilder.Entity<CompletedSagaOperation>(entity =>
         {
             entity.ToTable("COMPLETED_SAGA_OPERATIONS");
 
@@ -193,6 +194,6 @@ public class AppDbContext: DbContext
                 .HasColumnName("COMPLETED_AT")
                 .IsRequired();
 
-});
-    }
-}
+            });
+                 }
+                    }

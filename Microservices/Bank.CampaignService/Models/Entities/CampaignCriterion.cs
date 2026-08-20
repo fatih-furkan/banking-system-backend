@@ -1,8 +1,8 @@
-﻿using Bank.CampaignService.Models.Enums;
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json.Serialization;
+using Bank.Shared.Enums;
 
 namespace Bank.CampaignService.Models.Entities
 {

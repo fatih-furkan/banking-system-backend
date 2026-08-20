@@ -2,7 +2,7 @@
 // Defines the type of reward granted upon campaign completion.
 // ------------------------------------------------------------
 
-namespace Bank.CampaignService.Models.Enums
+namespace Bank.Shared.Enums
 {
     public enum RewardType
 

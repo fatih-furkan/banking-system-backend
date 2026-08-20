@@ -60,6 +60,28 @@ builder.Services.AddHttpClient<AccountClient>(client =>
     client.BaseAddress = new Uri(baseAddress);
 });
 
+builder.Services.AddHttpClient<PointClient>(client =>
+{
+    string baseAddress =
+        builder.Configuration["Services:PointService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.AccountServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
+});
+
+builder.Services.AddHttpClient<CampaignClient>(client =>
+{
+    string baseAddress =
+        builder.Configuration["Services:CampaignService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.CampaignServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
+});
+
 
 builder.Services.AddScoped<AuthorizationService>();
 builder.Services.AddScoped<SpendingLimitService>();
