@@ -1,10 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using System.Reflection.Metadata;
-using Bank.Shared;
 using Bank.Shared.Constants;
 using Bank.Shared.Enums;
 
-namespace Bank.AuthorizationService.Models;
+namespace Bank.PointService.Models.ClientModels;
 
 public class CreateAuthorizationRequest
 {
@@ -57,38 +55,21 @@ public class CreateAuthorizationRequest
     
     public ChannelCode ChannelCode { get; set; }
 
-    [Range(                                                         // ???
-        0.0,
-        double.MaxValue,
-        ErrorMessage = Constants.ExceptionMessages.InvalidBalance  // ???
-    )]
-
-
-    /*
     [Range(
         typeof(decimal),
         "0",
         "9999999999999999.99",
         ErrorMessage = Constants.ExceptionMessages.InvalidBalance
     )]
-
-    */
     public decimal? Balance { get; set; }
 
-    [Range(                                                                    //????
-        0.01,
-        double.MaxValue,
-        ErrorMessage = Constants.ExceptionMessages.InvalidTransactionAmount   //????
-    )]
-    /*
     [Range(
         typeof(decimal),
         "0.01",
         "9999999999999999.99",
         ErrorMessage = Constants.ExceptionMessages.InvalidTransactionAmount
-     )] 
-     */      
-    
+            
+    )]
     public decimal? TransactionAmount { get; set; }
     
     [Required]

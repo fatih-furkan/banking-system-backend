@@ -364,4 +364,19 @@ public static class Errors
         new(
             ErrorCode.SpendingLimitCompensateErr,
             Constants.ExceptionMessages.SpendingLimitCompensateError);
+    
+    public static readonly Error PointServiceError =
+        new(
+            ErrorCode.PointServiceErr,
+            Constants.ExceptionMessages.PointServiceError);
+    
+    public static readonly Error AddPointError =
+        new(
+            ErrorCode.AddPointErr,
+            Constants.ExceptionMessages.AddPointError);
+    
+    public static readonly Error CampaignClientError =
+        new(
+            ErrorCode.CampaignClientErr,
+            Constants.ExceptionMessages.CampaignClientError);
 }

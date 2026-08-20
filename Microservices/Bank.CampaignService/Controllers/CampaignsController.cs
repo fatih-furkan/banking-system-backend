@@ -1,6 +1,6 @@
 ﻿using Bank.CampaignService.Data;
 using Bank.CampaignService.Models.Entities;
-using Bank.CampaignService.Models.Enums;
+using Bank.Shared.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -35,8 +35,11 @@ namespace Bank.CampaignService.Controllers
                 .AsNoTracking()
                 .AsQueryable();
 
+            if (status.HasValue)
+            {
+                query = query.Where(c => c.Status == status.Value);
+            }
             
-
             if (targetDate.HasValue)
             {
                 var dateOnly = targetDate.Value.Date;

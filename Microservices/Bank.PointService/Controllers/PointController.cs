@@ -81,4 +81,17 @@ public class PointController: ControllerBase
 
         return Ok(result.Data);
     }
+    
+    [HttpPost("add-point")]
+    public async Task<IActionResult> Deposit(AddPointRequest request)
+    {
+        
+        var result = await _pointService.AddPointAsync(request);
+        if (result.Data == null)
+        {
+            return StatusCode(result.StatusCode, new ErrorResponse(result.Error));
+        }
+
+        return Ok(result.Data);
+    }
 }

@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using Bank.CampaignService.Models.Enums;
+using Bank.Shared.Enums;
+
 // ---------------------------------------------------
 // Primary Campaign Entity (Mapped to CAMPAIGN table).
 // Holds core campaign definitions, validity dates, rewards, and overall budget info.

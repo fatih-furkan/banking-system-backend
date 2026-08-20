@@ -74,4 +74,8 @@ public enum ErrorCode
     PointClientErr,
     PointAccountCreateErr,
     SpendingLimitCompensateErr,
+    PointServiceErr,
+    AddPointErr,
+    CampaignClientErr,
+    
 }

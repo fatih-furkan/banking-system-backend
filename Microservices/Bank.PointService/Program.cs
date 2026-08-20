@@ -1,6 +1,7 @@
 using Bank.PointService.Clients;
 using Bank.PointService.Data;
 using Bank.PointService.Services;
+using Bank.Shared;
 using Bank.Shared.Constants;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,6 +39,31 @@ builder.Services.AddHttpClient<CustomerClient>(client =>
     client.BaseAddress = new Uri(baseAddress);
 });
 
+builder.Services.AddHttpClient<AuthorizationClient>(client =>
+{
+    string baseAddress =
+        builder.Configuration["Services:AuthorizationService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.AuthorizationServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
+});
+
+builder.Services.AddHttpClient<CardClient>(client =>
+{
+    string baseAddress =
+        builder.Configuration["Services:CardService"]
+        ?? throw new InvalidOperationException(
+            Constants.ExceptionMessages.CardServiceUrlError
+        );
+
+    client.BaseAddress = new Uri(baseAddress);
+});
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 
 var app = builder.Build();
 
@@ -52,5 +78,7 @@ app.UseHttpsRedirection();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.UseExceptionHandler();
 
 app.Run();

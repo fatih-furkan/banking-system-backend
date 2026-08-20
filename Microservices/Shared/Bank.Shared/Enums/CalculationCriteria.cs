@@ -3,7 +3,7 @@
 // Criteria is Plural
 // --------------------------------------------------------
 
-namespace Bank.CampaignService.Models.Enums
+namespace Bank.Shared.Enums
 {
     public enum CalculationCriteria
     {

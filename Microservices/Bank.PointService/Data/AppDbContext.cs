@@ -10,7 +10,9 @@ public class AppDbContext: DbContext
     }
     
     public DbSet<PointAccount> PointAccounts => Set<PointAccount>();
-
+    public DbSet<CompletedSagaOperation> CompletedSagaOperations { get; set; }
+        = null!;
+    
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -58,5 +60,29 @@ public class AppDbContext: DbContext
                     .IsRequired();
             }
         );
+        
+        modelBuilder.Entity<CompletedSagaOperation>(entity =>
+        {
+            entity.ToTable("COMPLETED_SAGA_OPERATIONS");
+
+            entity.HasKey(operation => new
+            {
+                operation.OperationId,
+                operation.OperationType
+            });
+
+            entity.Property(operation => operation.OperationId)
+                .HasColumnName("OPERATION_ID")
+                .ValueGeneratedNever();
+
+            entity.Property(operation => operation.OperationType)
+                .HasColumnName("OPERATION_TYPE")
+                .HasMaxLength(50)
+                .IsRequired();
+
+            entity.Property(operation => operation.CompletedAt)
+                .HasColumnName("COMPLETED_AT")
+                .IsRequired();
+        });
     }
 }
