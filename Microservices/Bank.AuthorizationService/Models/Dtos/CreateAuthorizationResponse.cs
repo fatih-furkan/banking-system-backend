@@ -1,6 +1,6 @@
 ﻿using Bank.Shared.Enums;
 
-namespace Bank.AuthorizationService.Models;
+namespace Bank.AuthorizationService.Models.Dtos;
 
 public class CreateAuthorizationResponse
 {

@@ -40,7 +40,31 @@ public class PointService
     {
         return await _context.PointAccounts.FindAsync(accountNo);
     }
+
+    public async Task<decimal?> GetEarnedPointByCustomerIdAsync(long customerId)
+    {
+        var account = await _context.PointAccounts
+            .SingleOrDefaultAsync(account => account.CustomerId == customerId);
+
+        return account?.EarnedPoint;
+    } 
     
+    public async Task<decimal?> GetUsedPointByCustomerIdAsync(long customerId)
+    {
+        var account = await _context.PointAccounts
+            .SingleOrDefaultAsync(account => account.CustomerId == customerId);
+
+        return account?.UsedPoint;
+    } 
+    
+    public async Task<decimal?> GetExpiredPointByCustomerIdAsync(long customerId)
+    {
+        var account = await _context.PointAccounts
+            .SingleOrDefaultAsync(account => account.CustomerId == customerId);
+
+        return account?.ExpiredPoint;
+    } 
+        
     public async Task<ServiceResult<CreatePointAccountResponse?>> AddPointAccountAsync(
         CreatePointAccountRequest request)
     {
@@ -217,21 +241,6 @@ public class PointService
 
             pointAdded = true;
             
-            // var authorizationRequest = new CreateAuthorizationRequest
-            // {
-            //     AccountNo = null,
-            //     Balance = thePointAccount.EarnedPoint,
-            //     CardToken = cardToken,
-            //     ChannelCode = request.ChannelCode!.Value,
-            //     CustomerId = thePointAccount.CustomerId,
-            //     Otc = Constants.Otcs.EarnPoint,
-            //     Ots = Constants.Ots.EarnPoint.Default,
-            //     TransactionAmount = amount,
-            //     TransactionDescription = "Earn point",
-            //     TransactionStatus = "1",
-            //     TransactionId = request.TransactionId
-            // };
-            
             return ServiceResult<AddPointResponse>.Success(
                 new AddPointResponse
                 {
@@ -312,6 +321,179 @@ public class PointService
                 .SetProperty(
                     account => account.EarnedPoint,
                     account => account.EarnedPoint - amount
+                )
+            );
+
+        if (affectedRows == 0)
+        {
+            throw new GeneralException(
+                Errors.AccountNotFoundError,
+                StatusCodes.Status404NotFound
+            );
+        }
+
+        _context.CompletedSagaOperations.Add(
+            new CompletedSagaOperation
+            {
+                OperationId = operationId,
+                OperationType = operationType,
+                CompletedAt = DateTime.UtcNow
+            }
+        );
+
+        await _context.SaveChangesAsync();
+    }
+    
+    public async Task<ServiceResult<UsePointResponse>> UsePointAsync(UsePointRequest request)
+    {
+
+        decimal amount = request.Amount!.Value;
+
+        if (decimal.Round(amount, 2) != amount)
+        {
+            return ServiceResult<UsePointResponse>.Failure(
+                Errors.PrecisionError,
+                StatusCodes.Status400BadRequest
+            );
+        }
+
+        if (amount <= 0)
+        {
+            return ServiceResult<UsePointResponse>.Failure(
+                Errors.NegativeAmountError,
+                StatusCodes.Status400BadRequest
+            );
+        }
+        
+        var cardExistsResult = await _cardClient.CardExistsByCardNoAsync(request.CardNo);
+        
+        if (!cardExistsResult.IsSuccess ||
+            string.IsNullOrWhiteSpace(cardExistsResult.Data?.CardToken))
+        {
+            return ServiceResult<UsePointResponse>.Failure(
+                cardExistsResult.Error ?? Errors.AccountNotFoundError,
+                cardExistsResult.StatusCode
+            );
+        }
+
+        var cardToken = cardExistsResult.Data.CardToken;
+
+        bool pointAdded = false;
+
+        Guid operationId = Guid.NewGuid();
+        
+        try
+        {
+
+            //todo does he have enough points?
+            int affectedRows =
+                await _context.PointAccounts
+                    .Where(account => account.CustomerId == request.CustomerId)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(account => account.UsedPoint,
+                            account => account.UsedPoint + request.Amount)
+                    );
+
+            if (affectedRows == 0)
+            {
+                throw new GeneralException(
+                    Errors.PointAccountNotFoundError,
+                    StatusCodes.Status404NotFound
+                );
+            }
+
+            var thePointAccount = await _context.PointAccounts.SingleOrDefaultAsync(
+                account => account.CustomerId == request.CustomerId);
+
+            if (thePointAccount == null)
+            {
+                throw new GeneralException(
+                    Errors.PointAccountNotFoundError
+                );
+            }
+
+            pointAdded = true;
+            
+            return ServiceResult<UsePointResponse>.Success(
+                new UsePointResponse
+                {
+                    Amount = request.Amount,
+                    EarnedPoint = thePointAccount.EarnedPoint,
+                    TransactionId = request.TransactionId!.Value,
+                    AccountNo = thePointAccount.AccountNo
+                }
+            );
+        }
+        catch (Exception)
+        {
+            await CompensateUsePointAsync(
+                customerId: request.CustomerId!.Value,
+                amount: amount,
+                depositMade: pointAdded,
+                operationId: operationId
+            );
+
+            throw;
+        }
+    }
+        
+    private async Task CompensateUsePointAsync(
+    Guid operationId,
+    long customerId,
+    decimal amount,
+    bool depositMade)
+    {
+        
+        try
+        {
+            if (depositMade)
+            {
+                await CompensateUsePointUsedPointAsync(
+                    operationId,
+                    customerId,
+                    amount
+                );
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(
+                exception,
+                "Local use point compensation failed. " +
+                "OperationId: {OperationId}, CustomerId: {CustomerId}",
+                operationId,
+                customerId
+            );
+        }
+    }
+    
+    private async Task CompensateUsePointUsedPointAsync(
+        Guid operationId,
+        long customerId,
+        decimal amount)
+    {
+        const string operationType =
+            Constants.CompensationOperationTypes
+                .ReverseUsePointUsedPoint;
+
+        bool alreadyCompleted =
+            await _context.CompletedSagaOperations.AnyAsync(
+                operation =>
+                    operation.OperationId == operationId &&
+                    operation.OperationType == operationType
+            );
+
+        if (alreadyCompleted)
+        {
+            return;
+        }
+
+        int affectedRows = await _context.PointAccounts
+            .Where(account => account.CustomerId == customerId)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(
+                    account => account.UsedPoint,
+                    account => account.UsedPoint - amount
                 )
             );
 
