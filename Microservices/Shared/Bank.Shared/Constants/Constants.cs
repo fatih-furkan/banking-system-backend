@@ -181,5 +181,8 @@ public class Constants
 
         public const string ReverseAddPointEarnedPoint =
             "REVERSE_ADD_POINT_EARNED_POINT";
+
+        public const string ReverseUsePointUsedPoint =
+            "REVERSE_USE_POINT_USED_POINT";
     }
 }
