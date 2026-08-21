@@ -14,5 +14,6 @@ public interface IPointLogService
         PointTransactionType transactionType = PointTransactionType.Earn,
         string? description = null);
 
+    Task<List<PointTransactionLog>> GetAllLogsAsync();
     Task<List<PointTransactionLog>> GetLogsByCustomerIdAsync(long customerId);
 }

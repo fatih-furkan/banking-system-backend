@@ -46,6 +46,12 @@ public class PointLogService : IPointLogService
         return log;
     }
 
+    public async Task<List<PointTransactionLog>> GetAllLogsAsync()
+    {
+        return await _context.PointTransactionLogs
+            .OrderByDescending(x => x.TransactionDate)
+            .ToListAsync();
+    }
     public async Task<List<PointTransactionLog>> GetLogsByCustomerIdAsync(long customerId)
     {
         return await _context.PointTransactionLogs

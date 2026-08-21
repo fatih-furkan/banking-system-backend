@@ -14,6 +14,13 @@ public class PointLogController : ControllerBase
         _pointLogService = pointLogService;
     }
 
+    [HttpGet]
+    public async Task<IActionResult> GetAllLogs()
+    {
+        var logs = await _pointLogService.GetAllLogsAsync();
+        return Ok(logs);
+    }
+
     [HttpGet("customer/{customerId}")]
     public async Task<IActionResult> GetLogsByCustomerId(long customerId)
     {
