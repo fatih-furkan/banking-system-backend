@@ -25,8 +25,10 @@ public class AuthorizationService
     private readonly AccountSaleSaga _accountSaleSaga;
     private readonly AccountRefundSaga _accountRefundSaga;
     private readonly ILogger<AuthorizationService> _logger;
-    
-    public AuthorizationService(AppDbContext context, 
+    private readonly IPointLogService _pointLogService;
+
+    public AuthorizationService(
+        AppDbContext context,
         CardClient cardClient,
         AccountClient accountClient,
         SpendingLimitSaga spendingLimitSaga,
@@ -35,7 +37,8 @@ public class AuthorizationService
         ILogger<AuthorizationService> logger,
         CustomerClient customerClient,
         PointClient pointClient,
-        CampaignClient campaignClient)
+        CampaignClient campaignClient,
+        IPointLogService pointLogService)
     {
         _context = context;
         _cardClient = cardClient;
@@ -47,8 +50,9 @@ public class AuthorizationService
         _accountSaleSaga = accountSaleSaga;
         _accountRefundSaga = accountRefundSaga;
         _logger = logger;
+        _pointLogService = pointLogService;
     }
-    
+
     public async Task<List<Authorization>> GetAllAuthorizationsAsync()
     {
         return await _context.Authorizations.ToListAsync();
@@ -65,7 +69,7 @@ public class AuthorizationService
                 .Failure(accountExistsResult.Error ?? Errors.AccountClientError,
                     accountExistsResult.StatusCode);
         }
-        
+
         if (accountExistsResult.Data == false)
         {
             return ServiceResult<CreateAuthorizationResponse>
@@ -82,14 +86,14 @@ public class AuthorizationService
                     .Failure(cardExistsResult.Error ?? Errors.CardClientError,
                         cardExistsResult.StatusCode);
             }
-        
+
             if (cardExistsResult.Data == false)
             {
                 return ServiceResult<CreateAuthorizationResponse>
                     .Failure(Errors.CardNotFoundError);
             }
         }
-        
+
         //customer existence
         var customerExistsResult = await _customerClient.CustomerExistsAsync(request.CustomerId!.Value);
         if (!customerExistsResult.IsSuccess)
@@ -98,13 +102,13 @@ public class AuthorizationService
                 .Failure(customerExistsResult.Error ?? Errors.CustomerClientError,
                     customerExistsResult.StatusCode);
         }
-        
+
         if (customerExistsResult.Data == false)
         {
             return ServiceResult<CreateAuthorizationResponse>
                 .Failure(Errors.CustomerNotFoundError);
         }
-        
+
         Authorization auth = new Authorization
         {
             Balance = request.Balance,
@@ -124,7 +128,7 @@ public class AuthorizationService
             RefundedAmount = request.RefundedAmount,
             OriginalTransactionId = request.OriginalTransactionId
         };
-        
+
         bool transactionExists = await _context.Authorizations
             .AnyAsync(a => a.TransactionId == request.TransactionId);
 
@@ -135,7 +139,7 @@ public class AuthorizationService
                 StatusCodes.Status409Conflict
             );
         }
-        
+
         try
         {
             _context.Authorizations.Add(auth);
@@ -149,7 +153,7 @@ public class AuthorizationService
                 StatusCodes.Status409Conflict
             );
         }
-        
+
         CreateAuthorizationResponse response = new CreateAuthorizationResponse
         {
             Balance = auth.Balance,
@@ -169,33 +173,32 @@ public class AuthorizationService
         };
         return ServiceResult<CreateAuthorizationResponse>.Success(response);
     }
-    
+
     public async Task<ServiceResult<Unit>> AssignStatusAsync(AssignStatusRequest request, string guid)
     {
         bool isOnlyDigits =
             !string.IsNullOrEmpty(request.Status) &&
             request.Status.All(c => c is >= '0' and <= '9');
-        
+
         if (!isOnlyDigits)
         {
             return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
         }
-        
+
         var auth = await _context.Authorizations
             .FirstOrDefaultAsync(auth => auth.Guid == guid);
-        
+
         if (auth == null)
         {
             return ServiceResult<Unit>.Failure(Errors.AuthorizationGetError);
         }
-        
+
         auth.TransactionStatus = request.Status;
         await _context.SaveChangesAsync();
         return ServiceResult<Unit>.Success(new Unit());
     }
 
-    public async Task<ServiceResult<SaleResponse>> SaleAsync(
-    SaleRequest request)
+    public async Task<ServiceResult<SaleResponse>> SaleAsync(SaleRequest request)
     {
         decimal amount = request.Amount!.Value;
 
@@ -225,7 +228,7 @@ public class AuthorizationService
         }
 
         var cardExistsResult = await _cardClient.CardExistsByCardNoAsync(request.CardNo);
-        
+
         if (!cardExistsResult.IsSuccess ||
             string.IsNullOrWhiteSpace(cardExistsResult.Data?.CardToken))
         {
@@ -277,7 +280,7 @@ public class AuthorizationService
         string? authorizationGuid = null;
 
         Guid operationId = Guid.NewGuid();
-        
+
         try
         {
             var limitResult =
@@ -308,7 +311,7 @@ public class AuthorizationService
                     accountSaleSagaResult.StatusCode
                 );
             }
-            
+
             accountSaleMade = true;
 
             var authorizationRequest = new CreateAuthorizationRequest
@@ -334,6 +337,7 @@ public class AuthorizationService
             if (!authorizationResult.IsSuccess ||
                 authorizationResult.Data is null)
             {
+                
                 throw new GeneralException(
                     authorizationResult.Error ??
                     Errors.AuthorizationCreateError,
@@ -343,76 +347,99 @@ public class AuthorizationService
 
             authorizationGuid = authorizationResult.Data.Guid;
 
-            //errors in point section should not affect the sale process.
             try
             {
                 var getCampaignsResult = await _campaignClient
                     .GetCampaigns(status: "1", targetDate: DateTime.UtcNow);
-                if (!getCampaignsResult.IsSuccess)
-                {
-                    //todo log - campaigns could not be obtained
-                }
 
+                if (!getCampaignsResult.IsSuccess || getCampaignsResult.Data is null)
+                {
+                    _logger.LogWarning(
+                        "Active campaigns could not be retrieved. TransactionId: {TransactionId}, Error: {Error}, StatusCode: {StatusCode}",
+                        request.TransactionId,                                                                                                       
+                        getCampaignsResult.Error,
+                        getCampaignsResult.StatusCode
+                    );
+                }
                 else
                 {
-                    foreach (Campaign campaign in getCampaignsResult.Data!)
+                    foreach (var campaign in getCampaignsResult.Data)
                     {
-                        foreach (CampaignCriterion criterion in campaign.Criteria)
+                        foreach (var criterion in campaign.Criteria)
                         {
                             if (criterion.MinAmount <= request.Amount &&
                                 criterion.MaxAmount >= request.Amount)
                             {
+                                var earnedPoint = 0m;
+
                                 if (criterion.RewardCalculationType == RewardCalculationType.Fixed)
                                 {
-                                    var addPointResult = await _pointClient.AddPointAsync(
-                                        new AddPointRequest
-                                        {
-                                            Amount = criterion.RewardValue,
-                                            CustomerId = accountSaleSagaResult.Data.CustomerId,
-                                            TransactionId = request.TransactionId,
-                                            CardNo = request.CardNo,
-                                            ChannelCode = request.ChannelCode
-                                        }
+                                    earnedPoint = criterion.RewardValue;
+                                }
+                                else if (criterion.RewardCalculationType == RewardCalculationType.Percentage)
+                                {
+                                    earnedPoint = decimal.Round(
+                                        request.Amount.Value * criterion.RewardValue / 100m,
+                                        2,
+                                        MidpointRounding.AwayFromZero
                                     );
                                 }
 
-                                else if (criterion.RewardCalculationType == RewardCalculationType.Percentage)
+                                if (earnedPoint > 0)
                                 {
                                     var addPointResult = await _pointClient.AddPointAsync(
                                         new AddPointRequest
                                         {
-                                            Amount = decimal.Round(
-                                                request.Amount.Value * criterion.RewardValue / 100m,
-                                                2,
-                                                MidpointRounding.AwayFromZero
-                                            ),
+                                            Amount = earnedPoint,
                                             CustomerId = accountSaleSagaResult.Data.CustomerId,
                                             TransactionId = request.TransactionId,
                                             CardNo = request.CardNo,
                                             ChannelCode = request.ChannelCode
                                         }
                                     );
-                                }
 
-                                //todo log
+                                    if (addPointResult.IsSuccess)
+                                    {
+                                        await _pointLogService.LogPointGainAsync(
+                                            customerId: accountSaleSagaResult.Data.CustomerId,
+                                            campaignId: campaign.CampaignId,
+                                            transactionId: request.TransactionId?.ToString(),
+                                            transactionAmount: request.Amount.Value,
+                                            earnedPoint: earnedPoint,
+                                            description: $"{campaign.Name ?? "Campaign"} - Point Earned"
+                                        );
+                                    }
+                                    else
+                                    {
+                                        _logger.LogWarning(
+                                            "Point could not be added to customer. CustomerId: {CustomerId}, TransactionId: {TransactionId}, CampaignId: {CampaignId}, Error: {Error}",
+                                            accountSaleSagaResult.Data.CustomerId,
+                                            request.TransactionId,
+                                            campaign.CampaignId,
+                                            addPointResult.Error
+                                        );
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-            catch
+            catch (Exception exception)
             {
-                //todo log
+                _logger.LogError(
+                    exception,
+                    "An error occurred in point/campaign processing. TransactionId: {TransactionId}",
+                    request.TransactionId
+                );
             }
-            
-            
+
             return ServiceResult<SaleResponse>.Success(
                 new SaleResponse
                 {
                     Balance = accountSaleSagaResult.Data.Balance,
                     TransactionAmount = amount,
-                    TransactionTime =
-                        authorizationResult.Data.TransactionDate
+                    TransactionTime = authorizationResult.Data.TransactionDate
                 }
             );
         }
@@ -434,7 +461,7 @@ public class AuthorizationService
                 CustomerId = customerId,
                 Amount = amount
             };
-            
+
             await CompensateSaleAsync(
                 accountNo,
                 amount,
@@ -448,17 +475,17 @@ public class AuthorizationService
             throw;
         }
     }
-    
+
     private async Task CompensateSaleAsync(
-    string accountNo,
-    decimal amount,
-    CompensateUseSpendingLimitRequest limitRequest,
-    string? authorizationGuid,
-    bool accountSaleMade,
-    bool spendingLimitUsed,
-    Guid operationId)
+        string accountNo,
+        decimal amount,
+        CompensateUseSpendingLimitRequest limitRequest,
+        string? authorizationGuid,
+        bool accountSaleMade,
+        bool spendingLimitUsed,
+        Guid operationId)
     {
-       // Reverse order of the original operations.
+        // Reverse order of the original operations.
 
         // 1. Cancel authorization
         if (authorizationGuid is not null)
@@ -495,7 +522,7 @@ public class AuthorizationService
             }
         }
 
-        // 2. Restore the balance in AccountService. .
+        // 2. Restore the balance in AccountService.
         if (accountSaleMade)
         {
             try
@@ -568,9 +595,9 @@ public class AuthorizationService
             }
         }
     }
-    
+
     public async Task<ServiceResult<RefundResponse>> RefundAsync(
-    RefundRequest request)
+        RefundRequest request)
     {
         decimal amount = request.Amount!.Value;
 
@@ -589,7 +616,7 @@ public class AuthorizationService
                 StatusCodes.Status400BadRequest
             );
         }
-        
+
         Authorization? theAuthorization = await _context.Authorizations
             .SingleOrDefaultAsync(a => a.TransactionId == request.SaleTransactionId);
 
@@ -600,7 +627,7 @@ public class AuthorizationService
                 StatusCodes.Status400BadRequest
             );
         }
-        
+
         if (request.RefundType == RefundType.Complete)
         {
             if (theAuthorization.TransactionAmount != amount)
@@ -609,7 +636,6 @@ public class AuthorizationService
                     Errors.AmountRefundTypeMismatchError);
             }
         }
-
         else
         {
             if (theAuthorization.TransactionAmount <= amount)
@@ -624,7 +650,7 @@ public class AuthorizationService
             return ServiceResult<RefundResponse>.Failure(
                 Errors.MerchantNameMismatchError);
         }
-        
+
         if (request.ChannelCode != ChannelCode.Online &&
             request.ChannelCode != ChannelCode.Pos)
         {
@@ -633,10 +659,9 @@ public class AuthorizationService
                 StatusCodes.Status403Forbidden
             );
         }
-        
-        
+
         var cardExistsResult = await _cardClient.CardExistsByCardNoAsync(request.CardNo);
-        
+
         if (!cardExistsResult.IsSuccess ||
             string.IsNullOrWhiteSpace(cardExistsResult.Data?.CardToken))
         {
@@ -653,7 +678,7 @@ public class AuthorizationService
             return ServiceResult<RefundResponse>.Failure(
                 Errors.CardTokenMismatchError);
         }
-        
+
         var accountNoResult =
             await _cardClient.FindAccountNoByCardNoAsync(request.CardNo);
 
@@ -681,15 +706,14 @@ public class AuthorizationService
         }
 
         long customerId = customerIdResult.Data.Value;
-        
+
         bool accountRefundMade = false;
         string? authorizationGuid = null;
 
         Guid operationId = Guid.NewGuid();
-        
+
         try
         {
-
             var accountRefundRequest = new AccountRefundRequest
             {
                 AccountNo = accountNo,
@@ -705,12 +729,12 @@ public class AuthorizationService
                     accountRefundSagaResult.StatusCode
                 );
             }
-            
+
             accountRefundMade = true;
 
             await using var transaction =
                 await _context.Database.BeginTransactionAsync();
-            
+
             int affectedRefundedAmountRows = await _context.Authorizations
                 .Where(x =>
                     x.TransactionId == request.SaleTransactionId &&
@@ -730,7 +754,7 @@ public class AuthorizationService
                     StatusCodes.Status409Conflict
                 );
             }
-            
+
             await _context.Authorizations
                 .Where(authorization =>
                     authorization.TransactionId == request.SaleTransactionId &&
@@ -742,7 +766,7 @@ public class AuthorizationService
                         "0"
                     )
                 );
-            
+
             var authorizationRequest = new CreateAuthorizationRequest
             {
                 AccountNo = accountNo,
@@ -750,7 +774,7 @@ public class AuthorizationService
                 ChannelCode = request.ChannelCode.Value,
                 CustomerId = accountRefundSagaResult.Data.CustomerId,
                 Otc = Constants.Otcs.Refund,
-                Ots = request.RefundType == RefundType.Complete ? 
+                Ots = request.RefundType == RefundType.Complete ?
                     Constants.Ots.RefundOts.Complete : Constants.Ots.RefundOts.Partial,
                 TransactionAmount = amount,
                 TransactionDescription = "Refund",
@@ -773,11 +797,11 @@ public class AuthorizationService
                     authorizationResult.StatusCode
                 );
             }
-            
+
             await transaction.CommitAsync();
 
             authorizationGuid = authorizationResult.Data.Guid;
-            
+
             return ServiceResult<RefundResponse>.Success(
                 new RefundResponse
                 {
@@ -799,7 +823,7 @@ public class AuthorizationService
                 request.CardNo,
                 request.TransactionId
             );
-            
+
             await CompensateRefundAsync(
                 accountNo,
                 amount,
@@ -948,7 +972,7 @@ public class AuthorizationService
                 if (!result.IsSuccess)
                 {
                     _logger.LogError(
-                        "Account sale compensation failed. " +
+                        "Account refund compensation failed. " +
                         "OperationId: {OperationId}, AccountNo: {AccountNo}",
                         operationId,
                         accountNo
@@ -959,7 +983,7 @@ public class AuthorizationService
             {
                 _logger.LogError(
                     exception,
-                    "Account sale compensation threw an exception. " +
+                    "Account refund compensation threw an exception. " +
                     "OperationId: {OperationId}, AccountNo: {AccountNo}",
                     operationId,
                     accountNo
@@ -967,7 +991,7 @@ public class AuthorizationService
             }
         }
     }
-    
+
     private static bool IsDuplicateTransactionId(
         DbUpdateException exception)
     {
@@ -981,7 +1005,7 @@ public class AuthorizationService
                    StringComparison.OrdinalIgnoreCase
                );
     }
-    
+
     private static OracleException? FindOracleException(
         Exception exception)
     {
@@ -999,26 +1023,26 @@ public class AuthorizationService
 
         return null;
     }
-    
+
     private async Task<ServiceResult<Unit>> AssignStatusWithTrxnIdAsync(AssignStatusRequest request, long transactionId)
     {
         bool isOnlyDigits =
             !string.IsNullOrEmpty(request.Status) &&
             request.Status.All(c => c is >= '0' and <= '9');
-        
+
         if (!isOnlyDigits)
         {
             return ServiceResult<Unit>.Failure(Errors.InvalidStatusError);
         }
-        
+
         var auth = await _context.Authorizations
             .SingleOrDefaultAsync(auth => auth.TransactionId == transactionId);
-        
+
         if (auth == null)
         {
             return ServiceResult<Unit>.Failure(Errors.AuthorizationNotFoundError);
         }
-        
+
         auth.TransactionStatus = request.Status;
         await _context.SaveChangesAsync();
         return ServiceResult<Unit>.Success(new Unit());

@@ -57,21 +57,21 @@ public class CreateAuthorizationRequest
     
     public ChannelCode ChannelCode { get; set; }
 
-    [Range(
-        typeof(decimal),
-        "0",
-        "9999999999999999.99",
-        ErrorMessage = Constants.ExceptionMessages.InvalidBalance
+    [Range(                                                         
+        0.0,
+        double.MaxValue,
+        ErrorMessage = Constants.ExceptionMessages.InvalidBalance  
     )]
+
     public decimal? Balance { get; set; }
 
-    [Range(
-        typeof(decimal),
-        "0.01",
-        "9999999999999999.99",
-        ErrorMessage = Constants.ExceptionMessages.InvalidTransactionAmount
-            
+    [Range(                                                                    
+        0.01,
+        double.MaxValue,
+        ErrorMessage = Constants.ExceptionMessages.InvalidTransactionAmount   
     )]
+        
+    
     public decimal? TransactionAmount { get; set; }
     
     [Required]

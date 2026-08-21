@@ -20,7 +20,10 @@ public class AppDbContext: DbContext
         modelBuilder.HasSequence<long>("POINT_ACC_NO_SEQ")
             .StartsAt(1)
             .IncrementsBy(1);
-        
+
+       
+
+
         modelBuilder.Entity<PointAccount>(entity =>
             {
                 entity.ToTable("POINT_ACCOUNT");
@@ -60,7 +63,8 @@ public class AppDbContext: DbContext
                     .IsRequired();
             }
         );
-        
+
+       
         modelBuilder.Entity<CompletedSagaOperation>(entity =>
         {
             entity.ToTable("COMPLETED_SAGA_OPERATIONS");
