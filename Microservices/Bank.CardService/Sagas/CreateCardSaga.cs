@@ -46,8 +46,7 @@ public sealed class CreateCardSaga
         {
             _logger.LogError(
                 exception,
-                Constants.ExceptionMessages.AccountCompensationError,
-                accountNo
+                Constants.ExceptionMessages.AccountCompensationError
             );
         }
     }
