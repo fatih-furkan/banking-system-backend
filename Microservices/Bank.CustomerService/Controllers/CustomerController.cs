@@ -71,7 +71,7 @@ public class CustomerController: ControllerBase
         return Ok(exists);
     }
     
-    [HttpPost("{customerId:long}/assign-status")]
+    [HttpPatch("{customerId:long}/assign-status")]
     public async Task<IActionResult> AssignStatus(AssignStatusRequest request, long customerId)
     {
         var result = await _customerService.AssignStatusAsync(request, customerId);

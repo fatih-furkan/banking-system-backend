@@ -81,7 +81,7 @@ public class AuthorizationClient
             Status = status
         };
 
-        using var response = await _httpClient.PostAsJsonAsync(
+        using var response = await _httpClient.PatchAsJsonAsync(
             $"/api/authorization/{Uri.EscapeDataString(guid)}/assign-status",
             body
         );

@@ -95,7 +95,7 @@ public class AccountController: ControllerBase
         return Ok(result.Data);
     }
     
-    [HttpPost("{accountNo}/assign-status")]
+    [HttpPatch("{accountNo}/assign-status")]
     public async Task<IActionResult> AssignStatus(AssignStatusRequest request, string accountNo)
     {
         var result = await _accountService.AssignStatusAsync(request, accountNo);

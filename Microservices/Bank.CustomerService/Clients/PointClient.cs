@@ -86,7 +86,7 @@ public class PointClient
             Status = status
         };
 
-        using var response = await _httpClient.PostAsJsonAsync(
+        using var response = await _httpClient.PatchAsJsonAsync(
             $"/api/point/{Uri.EscapeDataString(pointAccountNo)}/assign-status",
             body
         );

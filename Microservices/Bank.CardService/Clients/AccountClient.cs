@@ -131,7 +131,7 @@ public class AccountClient
             Status = status
         };
 
-        using var response = await _httpClient.PostAsJsonAsync(
+        using var response = await _httpClient.PatchAsJsonAsync(
             $"/api/account/{encodedAccountNo}/assign-status",
             body
         );
