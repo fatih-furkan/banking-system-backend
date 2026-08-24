@@ -22,8 +22,7 @@ public class AccountClient
         var body = new
         {
             CustomerId = customerId,
-            BranchCode = branchCode,
-            Status = "1"
+            BranchCode = branchCode
         };
 
         using var response = await _httpClient.PostAsJsonAsync(

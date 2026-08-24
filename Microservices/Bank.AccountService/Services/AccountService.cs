@@ -67,7 +67,7 @@ public class AccountService
             AccountNo = accountNo.ToString(),
             BranchCode = createAccountRequest.BranchCode,
             CustomerId = createAccountRequest.CustomerId.Value,
-            Status = createAccountRequest.Status,
+            Status = "1",
             Balance = 0
         };
         _context.Accounts.Add(account);

@@ -11,9 +11,4 @@ public class CreateAccountRequest
     [MaxLength(3, ErrorMessage = Constants.ExceptionMessages.BranchCodeLong)]
     [MinLength(1, ErrorMessage = Constants.ExceptionMessages.BranchCodeEmpty)]
     public string BranchCode { get; set; } = null!;
-    
-    [MaxLength(2, ErrorMessage = Constants.ExceptionMessages.StatusLong)]
-    [MinLength(1, ErrorMessage = Constants.ExceptionMessages.StatusEmpty)]
-    public string Status { get; set; } = null!; //Varsa 1 yoksa  0 gibi
-
 }
