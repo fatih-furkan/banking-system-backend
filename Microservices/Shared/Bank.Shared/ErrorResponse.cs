@@ -19,7 +19,7 @@ public class ErrorResponse
             this.Error = error;
         }
 
-        Timestamp = DateTime.UtcNow;
+        Timestamp = DateTime.Now;
     }
     
     public override string ToString()

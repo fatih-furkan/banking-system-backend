@@ -33,7 +33,7 @@ public class PointLogService : IPointLogService
             TransactionAmount = transactionAmount,
             EarnedPoint = earnedPoint,
             TransactionType = transactionType,
-            TransactionDate = DateTime.UtcNow,
+            TransactionDate = DateTime.Now,
             Description = description ?? $"Point Transaction: {earnedPoint} Points"
         };
 

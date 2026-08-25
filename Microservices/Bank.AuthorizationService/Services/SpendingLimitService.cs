@@ -66,7 +66,7 @@ public class SpendingLimitService
                 .Failure(Errors.LimitAlreadyExistsError);
         }
         
-        var time = DateTime.UtcNow;
+        var time = DateTime.Now;
         
         var limit = new SpendingLimit
         {
@@ -166,7 +166,7 @@ public class SpendingLimitService
             );
         }
 
-        DateTime now = DateTime.UtcNow;
+        DateTime now = DateTime.Now;
         
         if (limits.Current.LastDailyReset.Date < now.Date)
         {
@@ -227,7 +227,7 @@ public class SpendingLimitService
                 NewMonthlyLimit = limit.MonthlyLimit,
                 NewAnnualLimit = limit.AnnualLimit,
                 TransactionAmount = request.Amount,
-                TransactionTime = DateTime.UtcNow
+                TransactionTime = DateTime.Now
             };
             
             return ServiceResult<UseSpendingLimitResponse>.Success(response);
@@ -286,7 +286,7 @@ public class SpendingLimitService
             {
                 OperationId = request.OperationId.Value,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 

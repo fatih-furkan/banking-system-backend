@@ -33,7 +33,7 @@ namespace Bank.TransactionService.Models.Entities
         public PointTransactionType TransactionType { get; set; } = PointTransactionType.Earn;
 
         [Column("TRANSACTION_DATE", TypeName = "TIMESTAMP")]
-        public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
+        public DateTime TransactionDate { get; set; } = DateTime.Now;
 
         [Column("DESCRIPTION")]
         [StringLength(250)]

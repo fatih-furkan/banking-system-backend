@@ -120,7 +120,7 @@ public class AuthorizationService
             Otc = request.Otc,
             Ots = request.Ots,
             TransactionAmount = request.TransactionAmount,
-            TransactionDate = DateTime.UtcNow,
+            TransactionDate = DateTime.Now,
             TransactionStatus = request.TransactionStatus,
             TransactionDescription = request.TransactionDescription,
             TransactionId = request.TransactionId!.Value,
@@ -350,7 +350,7 @@ public class AuthorizationService
             try
             {
                 var getCampaignsResult = await _campaignClient
-                    .GetCampaigns(status: "1", targetDate: DateTime.UtcNow);
+                    .GetCampaigns(status: "1", targetDate: DateTime.Now);
 
                 if (!getCampaignsResult.IsSuccess || getCampaignsResult.Data is null)
                 {
@@ -933,7 +933,7 @@ public class AuthorizationService
                         {
                             OperationId = operationId,
                             OperationType = operationType,
-                            CompletedAt = DateTime.UtcNow
+                            CompletedAt = DateTime.Now
                         }
                     );
 

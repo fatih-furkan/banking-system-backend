@@ -750,7 +750,7 @@ public class AccountService
             {
                 OperationId = operationId,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 
@@ -800,7 +800,7 @@ public class AccountService
             {
                 OperationId = operationId,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 
@@ -1057,7 +1057,7 @@ public class AccountService
             {
                 OperationId = request.OperationId.Value,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 
@@ -1139,7 +1139,7 @@ public class AccountService
             {
                 OperationId = request.OperationId.Value,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 

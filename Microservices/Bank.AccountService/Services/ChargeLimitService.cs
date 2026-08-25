@@ -68,7 +68,7 @@ public class ChargeLimitService
                 .Failure(Errors.LimitAlreadyExistsError);
         }
 
-        DateTime time = DateTime.UtcNow;
+        DateTime time = DateTime.Now;
         
         var limit = new ChargeLimit
         {
@@ -209,7 +209,7 @@ public class ChargeLimitService
             );
         }
 
-        DateTime now = DateTime.UtcNow;
+        DateTime now = DateTime.Now;
         
         if (limits.Current.LastDailyReset.Date < now.Date)
         {
@@ -269,7 +269,7 @@ public class ChargeLimitService
                 NewMonthlyLimit = limit.MonthlyLimit,
                 NewAnnualLimit = limit.AnnualLimit,
                 TransactionAmount = request.Amount,
-                TransactionTime = DateTime.UtcNow
+                TransactionTime = DateTime.Now
             };
             
             return ServiceResult<UseChargeLimitResponse>.Success(response);
@@ -328,7 +328,7 @@ public class ChargeLimitService
             {
                 OperationId = request.OperationId,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 

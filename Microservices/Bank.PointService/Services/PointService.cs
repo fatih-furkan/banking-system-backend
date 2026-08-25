@@ -337,7 +337,7 @@ public class PointService
             {
                 OperationId = operationId,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 
@@ -510,7 +510,7 @@ public class PointService
             {
                 OperationId = operationId,
                 OperationType = operationType,
-                CompletedAt = DateTime.UtcNow
+                CompletedAt = DateTime.Now
             }
         );
 
