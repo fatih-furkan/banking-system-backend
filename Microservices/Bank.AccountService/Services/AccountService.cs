@@ -996,7 +996,7 @@ public class AccountService
         }
     }
 
-    public async Task<ServiceResult<SaleResponse>>
+    public async Task<ServiceResult<CompensateSaleResponse>>
         CompensateSaleAsync(CompensateSaleRequest request)
     {
         const string operationType =
@@ -1020,14 +1020,14 @@ public class AccountService
 
             if (existingAccount is null)
             {
-                return ServiceResult<SaleResponse>.Failure(
+                return ServiceResult<CompensateSaleResponse>.Failure(
                     Errors.AccountNotFoundError,
                     StatusCodes.Status404NotFound
                 );
             }
 
-            return ServiceResult<SaleResponse>.Success(
-                new SaleResponse
+            return ServiceResult<CompensateSaleResponse>.Success(
+                new CompensateSaleResponse
                 {
                     Balance = existingAccount.Balance,
                     CustomerId = existingAccount.CustomerId
@@ -1046,7 +1046,7 @@ public class AccountService
 
         if (affectedRows == 0)
         {
-            return ServiceResult<SaleResponse>.Failure(
+            return ServiceResult<CompensateSaleResponse>.Failure(
                 Errors.AccountNotFoundError,
                 StatusCodes.Status404NotFound
             );
@@ -1069,8 +1069,8 @@ public class AccountService
             .SingleAsync(account =>
                 account.AccountNo == request.AccountNo);
 
-        return ServiceResult<SaleResponse>.Success(
-            new SaleResponse
+        return ServiceResult<CompensateSaleResponse>.Success(
+            new CompensateSaleResponse
             {
                 Balance = account.Balance,
                 CustomerId = account.CustomerId

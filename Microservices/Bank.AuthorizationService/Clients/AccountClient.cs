@@ -79,7 +79,7 @@ public class AccountClient
         );
     }
     
-    public async Task<ServiceResult<AccountSaleResponse>>
+    public async Task<ServiceResult<CompensateAccountSaleResponse>>
         AccountSaleCompensateAsync(CompensateAccountSaleRequest request)
     {
         using var response = await _httpClient.PostAsJsonAsync(
@@ -100,19 +100,19 @@ public class AccountClient
             {
             }
 
-            return ServiceResult<AccountSaleResponse>.Failure(
+            return ServiceResult<CompensateAccountSaleResponse>.Failure(
                 errorResponse?.Error ?? Errors.AccountSaleError,
                 (int)response.StatusCode
             );
         }
 
-        AccountSaleResponse? result;
+        CompensateAccountSaleResponse? result;
 
         try
         {
             result =
                 await response.Content
-                    .ReadFromJsonAsync<AccountSaleResponse>();
+                    .ReadFromJsonAsync<CompensateAccountSaleResponse>();
         }
         catch (JsonException)
         {
@@ -130,7 +130,7 @@ public class AccountClient
             );
         }
 
-        return ServiceResult<AccountSaleResponse>.Success(result);
+        return ServiceResult<CompensateAccountSaleResponse>.Success(result);
     }
     
     public async Task<ServiceResult<long?>> GetCustomerIdAsync(
