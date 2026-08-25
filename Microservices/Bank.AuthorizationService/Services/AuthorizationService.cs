@@ -355,7 +355,8 @@ public class AuthorizationService
                 if (!getCampaignsResult.IsSuccess || getCampaignsResult.Data is null)
                 {
                     _logger.LogWarning(
-                        "Active campaigns could not be retrieved. TransactionId: {TransactionId}, Error: {Error}, StatusCode: {StatusCode}",
+                        "Active campaigns could not be retrieved. TransactionId: {TransactionId}" +
+                        ", Error: {Error}, StatusCode: {StatusCode}",
                         request.TransactionId,                                                                                                       
                         getCampaignsResult.Error,
                         getCampaignsResult.StatusCode
@@ -365,63 +366,69 @@ public class AuthorizationService
                 {
                     foreach (var campaign in getCampaignsResult.Data)
                     {
-                        foreach (var criterion in campaign.Criteria)
+                        if (campaign.RewardType == RewardType.Points)
                         {
-                            if (criterion.MinAmount <= request.Amount &&
-                                criterion.MaxAmount >= request.Amount)
+                            foreach (var criterion in campaign.Criteria)
                             {
-                                var earnedPoint = 0m;
-
-                                if (criterion.RewardCalculationType == RewardCalculationType.Fixed)
+                                if (criterion.MinAmount <= request.Amount &&
+                                    criterion.MaxAmount >= request.Amount)
                                 {
-                                    earnedPoint = criterion.RewardValue;
-                                }
-                                else if (criterion.RewardCalculationType == RewardCalculationType.Percentage)
-                                {
-                                    earnedPoint = decimal.Round(
-                                        request.Amount.Value * criterion.RewardValue / 100m,
-                                        2,
-                                        MidpointRounding.AwayFromZero
-                                    );
-                                }
+                                    var earnedPoint = 0m;
 
-                                if (earnedPoint > 0)
-                                {
-                                    var addPointResult = await _pointClient.AddPointAsync(
-                                        new AddPointRequest
-                                        {
-                                            Amount = earnedPoint,
-                                            CustomerId = accountSaleSagaResult.Data.CustomerId,
-                                            TransactionId = request.TransactionId,
-                                            CardNo = request.CardNo,
-                                            ChannelCode = request.ChannelCode
-                                        }
-                                    );
-
-                                    if (addPointResult.IsSuccess)
+                                    if (criterion.RewardCalculationType == RewardCalculationType.Fixed)
                                     {
-                                        await _pointLogService.LogPointGainAsync(
-                                            customerId: accountSaleSagaResult.Data.CustomerId,
-                                            campaignId: campaign.CampaignId,
-                                            transactionId: request.TransactionId?.ToString(),
-                                            transactionAmount: request.Amount.Value,
-                                            earnedPoint: earnedPoint,
-                                            description: $"{campaign.Name ?? "Campaign"} - Point Earned"
+                                        earnedPoint = criterion.RewardValue;
+                                    }
+                                    else if (criterion.RewardCalculationType == RewardCalculationType.Percentage)
+                                    {
+                                        earnedPoint = decimal.Round(
+                                            request.Amount.Value * criterion.RewardValue / 100m,
+                                            2,
+                                            MidpointRounding.AwayFromZero
                                         );
                                     }
-                                    else
+
+                                    if (earnedPoint > 0)
                                     {
-                                        _logger.LogWarning(
-                                            "Point could not be added to customer. CustomerId: {CustomerId}, TransactionId: {TransactionId}, CampaignId: {CampaignId}, Error: {Error}",
-                                            accountSaleSagaResult.Data.CustomerId,
-                                            request.TransactionId,
-                                            campaign.CampaignId,
-                                            addPointResult.Error
+                                        var addPointResult = await _pointClient.AddPointAsync(
+                                            new AddPointRequest
+                                            {
+                                                Amount = earnedPoint,
+                                                CustomerId = accountSaleSagaResult.Data.CustomerId,
+                                                TransactionId = request.TransactionId,
+                                                CardNo = request.CardNo,
+                                                ChannelCode = request.ChannelCode
+                                            }
                                         );
+
+                                        if (addPointResult.IsSuccess)
+                                        {
+                                            await _pointLogService.LogPointGainAsync(
+                                                customerId: accountSaleSagaResult.Data.CustomerId,
+                                                campaignId: campaign.CampaignId,
+                                                transactionId: request.TransactionId?.ToString(),
+                                                transactionAmount: request.Amount.Value,
+                                                earnedPoint: earnedPoint,
+                                                description: $"{campaign.Name ?? "Campaign"} - Point Earned"
+                                            );
+                                        }
+                                        else
+                                        {
+                                            _logger.LogWarning(
+                                                "Point could not be added to customer. " +
+                                                "CustomerId: {CustomerId}, TransactionId: {TransactionId}" +
+                                                ", CampaignId: {CampaignId}, Error: {Error}",
+                                                accountSaleSagaResult.Data.CustomerId,
+                                                request.TransactionId,
+                                                campaign.CampaignId,
+                                                addPointResult.Error
+                                            );
+                                        }
                                     }
                                 }
                             }
                         }
+                        
                     }
                 }
             }
