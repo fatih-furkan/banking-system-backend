@@ -87,7 +87,7 @@ public class SpendingLimitController : ControllerBase
             );
         }
 
-        return Ok(result.Data);
+        return StatusCode(201, result.Data);
     }
 
     [HttpDelete("{customerId:long}")]

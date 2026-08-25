@@ -115,7 +115,7 @@ namespace Bank.CampaignService.Controllers
             await _context.Campaigns.AddAsync(campaign);
             await _context.SaveChangesAsync();
 
-            return Ok(new
+            return StatusCode(201, new
             {
                 success = true,
                 message = "Campaign created successfully.",
@@ -208,12 +208,6 @@ namespace Bank.CampaignService.Controllers
                 success = true,
                 message = $"Campaign with ID {id} deleted successfully."
             });
-
-
-
-
         }
-
-
-        }
+    }
 }

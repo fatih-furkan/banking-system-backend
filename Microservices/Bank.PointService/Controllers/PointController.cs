@@ -78,7 +78,7 @@ public class PointController: ControllerBase
             return StatusCode(403, new ErrorResponse(result.Error));
         }
 
-        return Ok(result.Data);
+        return StatusCode(201, result.Data);
     }
     
     [HttpDelete("{accountNo}")]
